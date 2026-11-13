@@ -1,11 +1,11 @@
 # 🍱 Lunch Cam: specification
 
-Lunch Cam is a basic iPhone app that takes one photo with the rear camera and the front camera at the same moment.
+Lunch Cam is a basic iPhone app that takes one photo with the rear camera and the front camera together.
 The rear photo fills the frame. The selfie sits as a small inset in a corner.
 
-**Why:** Max sends his girlfriend pictures of himself and his lunch.
+**Why:** Max sends his girlfriend pictures of himself and his lunch. The app is done when that takes a few taps.
 
-Status: agreed in a design interview on 2026-11-13. Nothing is built yet.
+Status: agreed in a design interview on 2026-11-13, then cut down once with the five-step engineering algorithm (see the last section). Layer 1 is written and not yet run on the phone.
 
 ## 🎯 Version 1
 
@@ -13,75 +13,84 @@ Status: agreed in a design interview on 2026-11-13. Nothing is built yet.
 | --- | --- |
 | Stack | Native Swift and SwiftUI. Apple's `AVCaptureMultiCamSession` (the multi-camera capture session) called directly. No third-party dependencies. |
 | Distribution | Installed on the phone from this Mac. No App Store, no TestFlight. |
-| Output | One image: rear photo full-frame with the selfie baked into the corner, exactly as the preview shows. No separate front and rear files. |
-| Shape | Portrait only, 3:4. The inset is also 3:4. The app does not rotate. |
-| Inset | Top-left corner, about a quarter of the screen width, rounded corners, fixed in place. |
-| Selfie | Saved mirrored, as the preview shows it. |
-| Rear lens | Main wide lens only. No zoom, no lens switching. |
-| Controls | One shutter button. The volume buttons also fire the shutter. No flash, timer, settings screen, or in-app gallery. |
-| After the shutter | The photo saves to the Photos library, then the iOS share sheet opens. |
-| Permissions | Camera, and add-only Photos access (the app can save, not read). |
-| Metadata | None. No location stamp. |
+| Output | One image: rear photo full-frame with the selfie baked into the corner, exactly as the preview shows. |
+| Shape | Portrait only. The app does not rotate. The photo keeps the shape the camera format delivers, with no cropping: 3:4 if layer 1 finds a 4:3 format, otherwise 9:16. The inset has the same shape. |
+| Inset | Top-left corner, about a quarter of the photo width, rounded corners, fixed in place. |
+| Selfie | Mirrored, as the preview shows it. |
+| Rear lens | Main wide lens only. |
+| Controls | One shutter button. |
+| After the shutter | The iOS share sheet opens with the photo. The share sheet's own "Save Image" row saves it to Photos. |
+| Permissions | Camera. The add-only Photos usage text stays in the app's settings so that "Save Image" works; the app has no Photos code. |
 | Name | "Lunch Cam", bundle ID `com.vegerot.lunchcam`. |
 | Location | `lunch-cam/` in the `ai-conversations` repository. It moves to its own repository later. |
-| Signing | The existing identity, team `MV276V5B7J`. If it is a free team, the app expires after 7 days and needs a reinstall. |
+| Signing | Max's Personal Team, `GWKJRP4KM9`. It is a free team, so the app expires after 7 days and needs a reinstall. |
 
-### 📷 Capture pipeline (tentative)
+### 📷 Capture pipeline
 
-- **Plan A, frame grab:** take one live video frame from each camera at the same instant and composite them.
-  The two frames are truly simultaneous, and video recording can later reuse the same compositor.
-  The cost is resolution: roughly video quality. The real number is measured in layer 1.
-- **Plan B, two photo outputs:** sharper stills taken a few milliseconds apart. Video would later need a second pipeline.
+**Frame grab:** keep the latest live video frame from each camera. When the shutter fires, composite the two latest frames into one image with Core Image.
 
-Plan A stays unless the layer 4 photo looks soft on the phone. Max and Claude both judge that photo.
+It is the least code: there is no waiting for two separate photo captures to both finish.
+The cost is resolution, which is roughly video quality. Layer 1 measures the real number.
+
+**Fallback, only if the layer 3 photo looks soft on the phone:** one photo output per camera. Max and Claude both judge that photo.
 
 ## 🚫 Not in version 1
 
-These are planned for later. Version 1 does not pre-build anything for them, except choosing plan A.
+Version 1 builds nothing in advance for these.
 
 - 🎥 Video and Live Photos.
 - 🔄 Swap which camera is the inset.
 - 🤏 Drag the inset and pinch to resize it.
 - 🏷️ Photo metadata, such as location.
+- 💾 Saving to Photos automatically.
+- 🔊 Volume-button shutter.
+- 🔦 Flash, timer, zoom, lens switching, settings screen, in-app gallery.
 
 ## 🧱 Layers
 
 Each layer is installed on the phone and checked by hand before the next layer starts.
 Each working layer is one Sapling commit that touches only `lunch-cam/`. Nothing is pushed unless Max asks.
 
-1. 🧪 **Probe.** An empty app that installs, launches, and shows whether multi-camera capture is supported, plus the formats each camera offers in a multi-camera session.
-2. 📷 **Rear preview.** The multi-camera session runs. The rear camera fills the screen in 3:4.
-3. 🤳 **Selfie inset.** The front camera is live in the top-left corner, mirrored.
-4. 🔘 **Shutter.** The button grabs both frames, composites one image, and saves it to Photos. Plan A or plan B is decided here.
-5. 📤 **Share sheet.** It opens right after the save.
-6. 🔊 **Volume-button shutter.**
+1. 🧪 **Probe.** An app that installs, launches, and shows whether multi-camera capture is supported, plus the formats each camera offers in a multi-camera session.
+2. 📷 **Preview.** The multi-camera session runs. The rear camera fills the screen and the mirrored front camera sits in the top-left corner.
+3. 🔘 **Shutter.** The button composites the two latest frames into one image and opens the share sheet with it.
 
 ## ✅ Testing
 
 - No automated unit tests.
-- **Claude checks** through iPhone Mirroring what is visible there: the app launches, the layout is right, nothing crashes. Not yet verified: whether the camera feed shows inside iPhone Mirroring.
-- **Max checks** what needs the physical phone: the layer 4 photo and the layer 6 volume buttons. Claude also analyzes those results and gives an opinion.
+- **Claude checks** each layer through the app's console output and through iPhone Mirroring: the app launches, the layout is right, nothing crashes. Not yet verified: whether the camera feed shows inside iPhone Mirroring.
+- **Max checks** the layer 3 photo on the physical phone. Claude also analyzes it and gives an opinion.
 - **Version 1 is done** when Max takes a real photo, sends it, and it looks right to him.
 
-### 💻 What this Mac can test
-
-`AVCaptureMultiCamSession` does not exist in native macOS apps.
-The macOS 27 SDK header `AVCaptureSession.h` marks it `API_AVAILABLE(ios(13.0), macCatalyst(14.0), tvos(17.0), visionos(2.1)) API_UNAVAILABLE(macos)`.
-The iOS Simulator has no cameras. So the capture session is tested only on the phone.
-
-The compositor is different. It takes two images and returns one, using Core Image, which runs on macOS.
-It is kept free of camera code so that a small Swift script on this Mac can feed it two still images and write out the result.
-That checks the layout, the mirroring, and the rounded corners without the phone.
+`AVCaptureMultiCamSession` cannot be tested on this Mac.
+The macOS 27 SDK header `AVCaptureSession.h` marks it `API_AVAILABLE(ios(13.0), macCatalyst(14.0), tvos(17.0), visionos(2.1)) API_UNAVAILABLE(macos)`, and the iOS Simulator has no cameras.
+The compositor uses Core Image, which does run on macOS. A Mac test harness for it is not built unless the phone loop turns out to be slow.
 
 ## 🛠️ Build and install
 
-One command builds with `xcodebuild` and installs with `devicectl` (Apple's device command-line tool).
+`lunch-cam/install.sh` builds with `xcodebuild`, installs with `devicectl` (Apple's device command-line tool), and launches the app with its output shown in the terminal.
 Max never needs to open Xcode. The same command is the weekly reinstall.
-
-The command is `lunch-cam/install.sh` if it stays under 20 lines. Otherwise it is a Swift command-line script.
+If the script grows past 20 lines, it becomes a Swift command-line script.
 
 ## 📱 Environment (measured 2026-11-13)
 
-- Phone: "iPhone Duo Max", model identifier `iPhone19,4`, paired and available.
-- Xcode 27.2 (build 27B52).
+- Phone: "iPhone Duo Max", model identifier `iPhone19,4`, iOS 27.2, wired, Developer Mode enabled.
+- Xcode 27.2 (build 27B52), signed in to Max's Apple account.
 - Multi-camera support on this phone: **not yet verified**. Layer 1 answers it.
+
+## ✂️ Five-step pass (2026-11-13)
+
+One pass of the five-step engineering algorithm: question each requirement, delete, simplify, speed up the loop, automate last.
+
+| Change | Reason |
+| --- | --- |
+| Deleted the automatic save to Photos. | The goal is sending. The share sheet already offers "Save Image". This removes the Photos code and one permission prompt. Cost: a photo you cancel out of sharing is gone. |
+| Deleted the volume-button shutter. | Claude proposed it "because it is a few lines". Nothing in the goal needs it. |
+| Deleted the Mac compositor test script. | Layer 3 tests the compositor on the phone anyway. A second harness is built only if the phone loop is slow. |
+| Deleted "video can reuse the compositor" as the reason for frame grab. | That was a "we might need this later" reason. Frame grab stays because it is the least code for version 1. |
+| Dropped the "truly simultaneous" requirement. | A few milliseconds between the two cameras cannot be seen in a lunch photo. |
+| Relaxed the fixed 3:4 shape. | Claude chose 3:4 to match the Camera app. If the phone only offers 16:9 multi-camera formats, forcing 3:4 means cropping code and fewer pixels. |
+| Merged six layers into three. | Rear preview plus inset is one session setup. With no automatic save, the share sheet is the shutter's only output, so they cannot be checked apart. Fewer install cycles. |
+| Kept `install.sh` as the only automation. | The weekly reinstall is not scheduled. It is one manual command until it annoys Max. |
+
+To restore: automatic save and the volume-button shutter are each a small addition after layer 3.
