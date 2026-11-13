@@ -57,8 +57,8 @@ Every milestone and every experiment gets its own Sapling commit that touches on
 ## ✅ Testing
 
 - No automated unit tests.
-- **Claude checks** each layer through the app's console output and through iPhone Mirroring: the app launches, the layout is right, nothing crashes. Not yet verified: whether the camera feed shows inside iPhone Mirroring.
-- **Max checks** the layer 3 photo and the layer 4 volume buttons on the physical phone. Claude also analyzes it and gives an opinion.
+- **Claude checks** each layer through the app's console output: the app launches, the session runs, nothing crashes. iPhone Mirroring cannot show the camera: it replaces the app with the notice "iPhone camera is not available from Mac" (measured 2026-11-13). From layer 3 on, Claude copies the saved photo off the phone and looks at it.
+- **Max checks** on the physical phone, with iPhone Mirroring disconnected: the layer 2 preview, the layer 3 photo, and the layer 4 volume buttons. Claude also analyzes it and gives an opinion.
 - **Version 1 is done** when Max takes a real photo, sends it, and it looks right to him.
 
 `AVCaptureMultiCamSession` cannot be tested on this Mac.
