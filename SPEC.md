@@ -5,7 +5,7 @@ The rear photo fills the frame. The selfie sits as a small inset in a corner.
 
 **Why:** Max sends his girlfriend pictures of himself and his lunch. The app is done when that takes a few taps.
 
-Status: agreed in a design interview on 2026-11-13, then cut down once with the five-step engineering algorithm (see the last section). Layer 1 is written and not yet run on the phone.
+Status: agreed in a design interview on 2026-11-13, then cut down once with the five-step engineering algorithm (see the last section). Layer 1 (the probe) has run on the phone; its result is in the Environment section.
 
 ## 🎯 Version 1
 
@@ -75,7 +75,28 @@ If the script grows past 20 lines, it becomes a Swift command-line script.
 
 - Phone: "iPhone Duo Max", model identifier `iPhone19,4`, iOS 27.2, wired, Developer Mode enabled.
 - Xcode 27.2 (build 27B52), signed in to Max's Apple account.
-- Multi-camera support on this phone: **not yet verified**. Layer 1 answers it.
+- Multi-camera support on this phone: **yes** (layer 1, measured). The rear wide camera and the front camera are allowed together.
+
+### 🧪 Layer 1 result: multi-camera formats
+
+Printed by the probe app on the phone. Each row is a video size, its top frame rate, and the largest photo that format allows.
+
+| Camera | Video size | Frames per second | Largest photo |
+| --- | --- | --- | --- |
+| Rear | 1920x1440 (4:3) | 60 | 4032x3024 |
+| Rear | 3840x2160 (16:9) | 30 | 4224x2376 |
+| Rear | 1920x1080 (16:9) | 60 | 4224x2376 |
+| Front | 1920x1440 (4:3) | 60 | 2016x1512 |
+| Front | 1920x1440 (4:3) | 30 | 3360x2520 |
+| Front | 1920x1080 (16:9) | 60 | 4032x2268 |
+
+Smaller formats (640x480 up to 1440x1080) also exist on both cameras.
+
+What this decides:
+
+- **Shape: 3:4.** Both cameras have a 4:3 format, 1920x1440, so nothing is cropped.
+- **Frame grab gives a 1440x1920 photo, about 2.8 megapixels.** The selfie inset is a quarter of the width, so it is shrunk from its 1440x1920 frame.
+- **The fallback would give a 3024x4032 rear photo, about 12 megapixels**, which is 2.1 times the width and height. That is the size of the gap layer 3 has to judge.
 
 ## ✂️ Five-step pass (2026-11-13)
 
