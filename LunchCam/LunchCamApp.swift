@@ -1,4 +1,6 @@
 import AVFoundation
+import AVKit
+import Photos
 import SwiftUI
 
 @main
@@ -11,7 +13,7 @@ struct LunchCamApp: App {
 }
 
 /// The rear camera in 3:4 with the mirrored front camera inset in the top-left corner,
-/// and a shutter button that saves the photo and opens the share sheet.
+/// and a shutter (on screen, or a volume button) that saves the photo and opens the share sheet.
 struct CameraView: View {
     private let camera = Camera()
     @State private var shot: Shot?
@@ -31,7 +33,7 @@ struct CameraView: View {
                     }
                 }
                 .frame(maxHeight: .infinity)
-            Button(action: shoot) {
+            Button(action: { shoot(via: "screen button") }) {
                 Circle()
                     .fill(.white)
                     .frame(width: 72, height: 72)
@@ -41,17 +43,27 @@ struct CameraView: View {
             .padding(.bottom, 24)
         }
         .task { await camera.start() }
-        .sheet(item: $shot) { ShareSheet(image: $0.image) }
+        // The volume buttons (and other hardware capture buttons) fire the shutter on release.
+        .onCameraCaptureEvent { event in
+            if event.phase == .ended { shoot(via: "hardware button") }
+        }
+        .sheet(item: $shot) { shot in
+            ShareSheet(image: shot.image).onAppear { print("share sheet shown") }
+        }
     }
 
-    private func shoot() {
+    private func shoot(via source: String) {
         guard let image = camera.photo() else { return }
         // iOS asks for add-only Photos access the first time.
-        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+        PHPhotoLibrary.shared().performChanges {
+            PHAssetChangeRequest.creationRequestForAsset(from: image)
+        } completionHandler: { saved, error in
+            print("saved to Photos: \(saved) \(error?.localizedDescription ?? "")")
+        }
         // A copy the Mac can fetch over the cable to look at the result.
         let copy = URL.documentsDirectory.appending(path: "last.jpg")
         try? image.jpegData(compressionQuality: 0.9)?.write(to: copy)
-        print("shot: \(Int(image.size.width))x\(Int(image.size.height))")
+        print("shot via \(source): \(Int(image.size.width))x\(Int(image.size.height))")
         shot = Shot(image: image)
     }
 }

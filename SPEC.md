@@ -5,7 +5,7 @@ The rear photo fills the frame. The selfie sits as a small inset in a corner.
 
 **Why:** Max sends his girlfriend pictures of himself and his lunch. The app is done when that takes a few taps.
 
-Status: agreed in a design interview on 2026-11-13, then cut down once with the five-step engineering algorithm (see the last section). Layer 1 (the probe) has run on the phone; its result is in the Environment section.
+Status: agreed in a design interview on 2026-11-13, then cut down once with the five-step engineering algorithm (see the last section). All four layers run on the phone. Still open: whether the selfie is mirrored, and Max's real lunch photo.
 
 ## 🎯 Version 1
 
@@ -107,6 +107,21 @@ Max pressed the shutter; Claude copied `Documents/last.jpg` off the phone with `
 - Rear frame upright. Selfie upright, top-left, 360x480 with rounded corners. It matches the preview.
 - Sharpness, judged by Claude on a full-size crop: terminal text on a monitor about an arm's length away is readable but slightly soft, like a video still. Good enough for a chat message. Not yet tried in dim light, where grabbed video frames miss the iPhone's photo clean-up.
 - The rotation API reports 90 degrees for the rear camera and 270 for the front on this phone.
+
+### 🔊 Layer 4 result: both buttons, save and share (2026-11-13)
+
+The app prints one line per event, read on the Mac with `devicectl device process launch --console`. Max took one shot with each button:
+
+```
+shot via hardware button: 1440x1920
+share sheet shown
+saved to Photos: true
+shot via screen button: 1440x1920
+share sheet shown
+saved to Photos: true
+```
+
+The save uses the Photos framework's change request, because its completion reports success or failure.
 
 ## ✂️ Five-step pass (2026-11-13)
 
