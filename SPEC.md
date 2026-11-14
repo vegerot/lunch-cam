@@ -5,7 +5,7 @@ The rear photo fills the frame. The selfie sits as a small inset in a corner.
 
 **Why:** Max sends his girlfriend pictures of himself and his lunch. The app is done when that takes a few taps.
 
-Status: agreed in a design interview on 2026-11-13, then cut down once with the five-step engineering algorithm (see the last section). All four layers run on the phone. Still open: whether the selfie is mirrored, and Max's real lunch photo.
+Status: agreed in a design interview on 2026-11-13, then cut down once with the five-step engineering algorithm (see the last section). All four layers run on the phone, and Max confirmed that the selfie is mirrored. Still open: Max's real lunch photo, which is what finishes version 1.
 
 ## 🎯 Version 1
 
