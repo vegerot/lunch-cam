@@ -68,7 +68,8 @@ A Mac test harness for the compositor is not built: the phone loop is one comman
 
 ## 🛠️ Build and install
 
-`lunch-cam/install.sh` builds with `xcodebuild`, installs with `devicectl` (Apple's device command-line tool), and launches the app with its output shown in the terminal.
+`lunch-cam/install.sh` builds with `xcodebuild`, installs with `devicectl` (Apple's device command-line tool), and launches the app. `install.sh --console` also keeps showing the app's output; stopping it stops the app.
+`lunch-cam/last-photo.sh` copies the last photo off the phone, for as long as the app keeps its debug copy.
 Max never needs to open Xcode. The same command is the weekly reinstall.
 If the script grows past 20 lines, it becomes a Swift command-line script.
 
