@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
 # Build Lunch Cam, install it on the paired iPhone, and launch it with its output shown here.
 set -euo pipefail
 cd "$(dirname "$0")"
