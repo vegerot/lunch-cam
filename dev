@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 # Lunch Cam developer commands for the paired iPhone.
-#   dev.sh install [--console]  Build, install and launch. Unlock the phone first.
-#                               --console keeps showing the app's output; stopping it stops the app.
-#   dev.sh photo [file]         Copy the last photo the app took to file (default: last.jpg).
-#                               The app keeps that debug copy; delete this command when the copy goes.
+#   dev install [--console]  Build, install and launch. Unlock the phone first.
+#                            --console keeps showing the app's output; stopping it stops the app.
+#   dev photo [file]         Copy the last photo the app took to file (default: last.jpg).
+#                            The app keeps that debug copy; delete this command when the copy goes.
 set -euo pipefail
 cd "$(dirname "$0")"
 DEVICE="00008160-0001393420434036" # "iPhone Duo Max"
@@ -28,7 +28,7 @@ photo)
   sips --getProperty pixelWidth --getProperty pixelHeight "$file"
   ;;
 *)
-  sed -n '3,7p' "$0" # the usage comment above
+  sed -n '3,7p' "$(basename "$0")" # the usage comment above; the `cd` put us next to the script
   exit 2
   ;;
 esac
