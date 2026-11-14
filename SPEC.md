@@ -138,6 +138,6 @@ One pass of the five-step engineering algorithm: question each requirement, dele
 | Dropped the "truly simultaneous" requirement. | A few milliseconds between the two cameras cannot be seen in a lunch photo. |
 | Relaxed the fixed 3:4 shape. | Claude chose 3:4 to match the Camera app. If the phone only offers 16:9 multi-camera formats, forcing 3:4 means cropping code and fewer pixels. |
 | Merged six layers into four. | Rear preview plus inset is one session setup. Save and share are both a few lines after the composite. Fewer install cycles. |
-| Kept `install.sh` as the only automation. | The weekly reinstall is not scheduled. It is one manual command until it annoys Max. |
+| Kept the install command (now `dev.swift install`) as the only automation. | The weekly reinstall is not scheduled. It is one manual command until it annoys Max. |
 
 Added back by Max after the pass: the automatic save to Photos and the volume-button shutter. The pass had deleted both.
