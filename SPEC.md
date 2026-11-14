@@ -68,13 +68,14 @@ A Mac test harness for the compositor is not built: the phone loop is one comman
 
 ## 🛠️ Build and install
 
-`lunch-cam/dev.swift` is one Swift command-line script with two subcommands:
+`lunch-cam/dev.sh` is one shell script with two subcommands:
 
-- `./dev.swift install` builds with `xcodebuild`, installs with `devicectl` (Apple's device command-line tool), and launches the app. Adding `--console` keeps showing the app's output; stopping it stops the app. This is also the weekly reinstall.
-- `./dev.swift photo [file]` copies the last photo off the phone, for as long as the app keeps its debug copy.
+- `./dev.sh install` builds with `xcodebuild`, installs with `devicectl` (Apple's device command-line tool), and launches the app. Adding `--console` keeps showing the app's output; stopping it stops the app. This is also the weekly reinstall.
+- `./dev.sh photo [file]` copies the last photo off the phone, for as long as the app keeps its debug copy.
 
 Max never needs to open Xcode.
-It is Swift, not shell, because the two commands together passed the 20-line limit set for a shell script.
+
+The script is 34 lines. Max waived the 20-line limit for it after a Swift version was tried: Swift needed 64 lines (53 of code) against 29 (17 of code) for the two original shell scripts together, because running commands is what shell does natively.
 
 ## 📱 Environment (measured 2026-11-13)
 
@@ -138,6 +139,6 @@ One pass of the five-step engineering algorithm: question each requirement, dele
 | Dropped the "truly simultaneous" requirement. | A few milliseconds between the two cameras cannot be seen in a lunch photo. |
 | Relaxed the fixed 3:4 shape. | Claude chose 3:4 to match the Camera app. If the phone only offers 16:9 multi-camera formats, forcing 3:4 means cropping code and fewer pixels. |
 | Merged six layers into four. | Rear preview plus inset is one session setup. Save and share are both a few lines after the composite. Fewer install cycles. |
-| Kept the install command (now `dev.swift install`) as the only automation. | The weekly reinstall is not scheduled. It is one manual command until it annoys Max. |
+| Kept the install command (now `dev.sh install`) as the only automation. | The weekly reinstall is not scheduled. It is one manual command until it annoys Max. |
 
 Added back by Max after the pass: the automatic save to Photos and the volume-button shutter. The pass had deleted both.

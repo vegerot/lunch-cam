@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+# Lunch Cam developer commands for the paired iPhone.
+#   dev.sh install [--console]  Build, install and launch. Unlock the phone first.
+#                               --console keeps showing the app's output; stopping it stops the app.
+#   dev.sh photo [file]         Copy the last photo the app took to file (default: last.jpg).
+#                               The app keeps that debug copy; delete this command when the copy goes.
+set -euo pipefail
+cd "$(dirname "$0")"
+DEVICE="00008160-0001393420434036" # "iPhone Duo Max"
+APP="com.vegerot.lunchcam"
+
+case "${1:-}" in
+install)
+  # The filter drops lines Xcode prints on every build for this phone. They are not errors.
+  xcodebuild -project LunchCam.xcodeproj -scheme LunchCam -configuration Debug \
+    -destination "id=$DEVICE" -derivedDataPath build -allowProvisioningUpdates -quiet build 2>&1 |
+    { grep --invert-match --extended-regexp 'DVTDevice|IDERunDestination|headermap' || true; }
+  xcrun devicectl device install app --device "$DEVICE" \
+    build/Build/Products/Debug-iphoneos/LunchCam.app
+  exec xcrun devicectl device process launch --device "$DEVICE" \
+    --terminate-existing ${2:+"$2"} "$APP"
+  ;;
+photo)
+  file="${2:-last.jpg}"
+  xcrun devicectl device copy from --device "$DEVICE" --domain-type appDataContainer \
+    --domain-identifier "$APP" --source Documents/last.jpg --destination "$file" >/dev/null
+  sips --getProperty pixelWidth --getProperty pixelHeight "$file"
+  ;;
+*)
+  sed -n '3,7p' "$0" # the usage comment above
+  exit 2
+  ;;
+esac
