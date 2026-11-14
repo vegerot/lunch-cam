@@ -27,7 +27,7 @@ Status: agreed in a design interview on 2026-11-13, then cut down once with the 
 
 ### 📷 Capture pipeline
 
-**Frame grab:** keep the latest live video frame from each camera. When the shutter fires, composite the two latest frames into one image with Core Image.
+**Frame grab:** keep the latest live video frame from each camera. When the shutter fires, draw the two latest frames into one image: the rear frame, then the selfie clipped to a rounded rectangle.
 
 It is the least code: there is no waiting for two separate photo captures to both finish.
 The cost is resolution, which is roughly video quality. Layer 1 measures the real number.
@@ -57,13 +57,14 @@ Every milestone and every experiment gets its own Sapling commit that touches on
 ## ✅ Testing
 
 - No automated unit tests.
+- **Claude watches the phone's screen** through QuickTime Player (File ▸ New Movie Recording, with the iPhone as the camera). It shows the camera and is view only, so Max does the taps.
 - **Claude checks** each layer through the app's console output: the app launches, the session runs, nothing crashes. iPhone Mirroring cannot show the camera: it replaces the app with the notice "iPhone camera is not available from Mac" (measured 2026-11-13). From layer 3 on, Claude copies the saved photo off the phone and looks at it.
 - **Max checks** on the physical phone, with iPhone Mirroring disconnected: the layer 2 preview, the layer 3 photo, and the layer 4 volume buttons. Claude also analyzes it and gives an opinion.
 - **Version 1 is done** when Max takes a real photo, sends it, and it looks right to him.
 
 `AVCaptureMultiCamSession` cannot be tested on this Mac.
 The macOS 27 SDK header `AVCaptureSession.h` marks it `API_AVAILABLE(ios(13.0), macCatalyst(14.0), tvos(17.0), visionos(2.1)) API_UNAVAILABLE(macos)`, and the iOS Simulator has no cameras.
-The compositor uses Core Image, which does run on macOS. A Mac test harness for it is not built unless the phone loop turns out to be slow.
+A Mac test harness for the compositor is not built: the phone loop is one command, and Claude copies each photo off the phone to look at it.
 
 ## 🛠️ Build and install
 
@@ -97,6 +98,15 @@ What this decides:
 - **Shape: 3:4.** Both cameras have a 4:3 format, 1920x1440, so nothing is cropped.
 - **Frame grab gives a 1440x1920 photo, about 2.8 megapixels.** The selfie inset is a quarter of the width, so it is shrunk from its 1440x1920 frame.
 - **The fallback would give a 3024x4032 rear photo, about 12 megapixels**, which is 2.1 times the width and height. That is the size of the gap layer 3 has to judge.
+
+### 🔘 Layer 3 result: the first photo (2026-11-13)
+
+Max pressed the shutter; Claude copied `Documents/last.jpg` off the phone with `devicectl device copy from`.
+
+- The photo is 1440x1920, about 620 kB as a JPEG at quality 0.9.
+- Rear frame upright. Selfie upright, top-left, 360x480 with rounded corners. It matches the preview.
+- Sharpness, judged by Claude on a full-size crop: terminal text on a monitor about an arm's length away is readable but slightly soft, like a video still. Good enough for a chat message. Not yet tried in dim light, where grabbed video frames miss the iPhone's photo clean-up.
+- The rotation API reports 90 degrees for the rear camera and 270 for the front on this phone.
 
 ## ✂️ Five-step pass (2026-11-13)
 
