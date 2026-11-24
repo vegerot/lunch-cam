@@ -160,7 +160,7 @@ First step of "Optimize for iPhone Duo". Background and sources: `iphone-duo-not
 - **Rule** (`LunchCam/Layout.swift`, pure, tested): the shutter gets a strip of its own, 96 points wide, below the picture or beside it, whichever leaves the larger 3:4 picture. The picture and the strip are centered together. The shutter never covers the picture; in a space with no spare room the picture shrinks instead.
 - **Orientation lock removed.** The project allowed portrait only. Apple says the inner display ignores that and scales such an app. All four orientations are now allowed, and the layout follows the space it is given.
 - **Seen in Device Hub with the tint** (layout only, cameras are black there): closed, the shutter sits below the picture; open, it sits to the right of the picture. Before, it covered the picture's bottom edge in both.
-- **Not done yet:** half-folded, the picture still crosses the fold (tabletop mode); the camera cutout of the open display covers a corner of the picture.
+- **Done later the same day** (see "Where the cameras and the fold are"): half-folded, the picture keeps to one side of the fold; the selfie inset starts on the camera of the open display, which Max prefers to moving the picture away from it.
 
 ## 🔄 Rotation result (2026-11-23)
 
@@ -200,7 +200,10 @@ An experiment for two TODO items: the camera cutout over the picture, and the se
 - **Built: the selfie inset starts on the camera** (`Inset(near:)`, tested; `LunchCamApp.swift`). Max does not mind the inset lying on the under-screen camera and said it sometimes helps, so the picture stays where it is and is not slid clear. The inset is centered as near to the camera as its margin allows: on the camera when the lens is under the picture, otherwise in the nearest corner. It follows the camera through folds and turns until a drag or pinch places it; after that it stays where Max put it for the rest of the run.
 - **Which occlusion is the camera:** the system does not say. The app takes the smallest one (camera 62 by 40 at most, status strip 84 by 124 at least).
 - **Seen in Device Hub with the tint:** closed and open on the wide screen, the inset is in the top right corner beside the camera; in the three other open orientations it lies on the camera. Not checked with real pictures, and not by Max's hand.
-- **Not measured:** half-folded on the tall screen (tabletop). Device Hub's rotate button did nothing on the first press in one pose; the second press worked.
+- **The fold on the tall screen (tabletop), measured later the same day:** `frame` 0, 455.5, 669, 40. The same band, turned.
+- **Built: half-folded, the picture is on the cameras' half** (`Layout(in:landscape:fold:lens:)`, tested). Max's rule: the preview goes on the side where both cameras are. The picture is the largest one that fits that half, centered in it, and the shutter is centered in the other half. The lens position already known for the inset decides which half. Apple's `ArrangementView` was not tried: the rule was a dozen lines in `Layout`, where it is tested on the Mac.
+- **Seen in Device Hub with the tint, in all four half-folded orientations:** book with the cameras left and right, table with the cameras on the top half and on the bottom half. Each time the picture was on the half with the camera and the shutter on the other. On the table with the cameras on the bottom half, the picture is on the half that lies flat; that follows from Max's rule. Not checked with real pictures or by Max's hand.
+- **Not used:** the fold's 20-point margins. The picture runs up to the 40-point band itself. Device Hub's rotate button did nothing on the first press in one pose; the second press worked.
 
 ## ✂️ Five-step pass (2026-11-13)
 

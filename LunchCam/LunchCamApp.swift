@@ -29,6 +29,8 @@ struct CameraView: View {
     @State private var blank = false
     /// Where the front camera sits on the screen, once the system has said so.
     @State private var lens: CGRect?
+    /// The band on the screen where the phone bends, while it is half-folded.
+    @State private var fold: CGRect?
     /// True once a drag or pinch has placed the inset. Until then it follows the front camera.
     @State private var placed = false
 
@@ -40,13 +42,25 @@ struct CameraView: View {
                 // The camera is the smaller one: 62x40 points at most, the strip 84x124 at least.
                 let camera = screen.reservedRegions(kind: .occlusion).map(\.frame)
                     .min { $0.width * $0.height < $1.width * $1.height }
-                Color.black.onChange(of: camera, initial: true) { lens = camera }
+                let bend = screen.reservedRegions(kind: .division).first?.frame
+                Color.black
+                    .onChange(of: camera, initial: true) { lens = camera }
+                    .onChange(of: bend, initial: true) {
+                        print("fold: \(bend.map { "\($0)" } ?? "none")")
+                        withAnimation(.easeInOut(duration: 0.3)) { fold = bend }
+                    }
             }
             .ignoresSafeArea()
             // Laid out from the space the app is given, which changes when the phone folds or turns.
             GeometryReader { space in
-                let layout = Layout(in: space.size, landscape: landscape)
                 let origin = space.frame(in: .global).origin
+                // The fold and the camera are measured on the whole screen; `Layout` wants them
+                // in this space's own coordinates.
+                let layout = Layout(
+                    in: space.size, landscape: landscape,
+                    fold: fold?.offsetBy(dx: -origin.x, dy: -origin.y),
+                    lens: CGPoint(x: (lens?.midX ?? 0) - origin.x, y: (lens?.midY ?? 0) - origin.y)
+                )
                 let picture = layout.picture.offsetBy(dx: origin.x, dy: origin.y)
                 preview(front: swapped)
                     .overlay {

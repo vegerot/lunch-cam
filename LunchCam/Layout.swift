@@ -12,8 +12,32 @@ struct Layout {
     /// The width of the shutter's strip: the shutter with 12 of room on each side.
     static let strip = 96.0
 
-    init(in space: CGSize, landscape: Bool = false) {
+    /// `fold` is the band where a half-folded phone bends, and `lens` a point on the front camera,
+    /// both in the same coordinates as `space`. With a fold, the picture goes on the half that
+    /// holds the cameras and the shutter on the other half.
+    init(in space: CGSize, landscape: Bool = false, fold: CGRect? = nil, lens: CGPoint = .zero) {
         let shape = landscape ? 4.0 / 3 : 3.0 / 4 // width over height
+        let size = CGSize(width: Layout.shutterSize, height: Layout.shutterSize)
+        if let fold {
+            // The fold crosses the whole space one way; the two halves lie on either side of it.
+            let whole = CGRect(origin: .zero, size: space)
+            let across = fold.width >= space.width
+            let first = across
+                ? whole.divided(atDistance: fold.minY, from: .minYEdge).slice
+                : whole.divided(atDistance: fold.minX, from: .minXEdge).slice
+            let second = across
+                ? whole.divided(atDistance: fold.maxY, from: .minYEdge).remainder
+                : whole.divided(atDistance: fold.maxX, from: .minXEdge).remainder
+            let camerasFirst = first.contains(lens)
+            let home = camerasFirst ? first : second
+            let other = camerasFirst ? second : first
+            let width = min(home.width, home.height * shape)
+            picture = CGRect(x: home.midX - width / 2, y: home.midY - width / shape / 2,
+                             width: width, height: width / shape)
+            shutter = CGRect(origin: CGPoint(x: other.midX - size.width / 2, y: other.midY - size.height / 2),
+                             size: size)
+            return
+        }
         // The strip goes below the picture or beside it, whichever leaves the larger picture.
         let widthWithStripBelow = min(space.width, (space.height - Layout.strip) * shape)
         let widthWithStripBeside = min(space.width - Layout.strip, space.height * shape)
@@ -21,7 +45,6 @@ struct Layout {
         let width = max(widthWithStripBelow, widthWithStripBeside)
         let height = width / shape
         // The picture and the strip are centered together.
-        let size = CGSize(width: Layout.shutterSize, height: Layout.shutterSize)
         if below {
             let top = (space.height - height - Layout.strip) / 2
             picture = CGRect(x: (space.width - width) / 2, y: top, width: width, height: height)

@@ -42,4 +42,33 @@ func layoutTests() {
            CGRect(x: 52, y: 0, width: 800, height: 600))
     expect("sideways: the shutter sits beside the picture", sideways.shutter,
            CGRect(x: 864, y: 264, width: 72, height: 72))
+
+    // Half-folded like a book: a fold 40 wide down the middle of the same wide space, and the
+    // cameras on the right half (x 520 to 1000, so 480 wide). The picture takes that half's
+    // full height: 600 tall, 450 wide, centered in the half: x = 520 + (480 - 450) / 2 = 535.
+    // The shutter is centered in the other half (x 0 to 480): center (240, 300).
+    let book = Layout(in: CGSize(width: 1000, height: 600),
+                      fold: CGRect(x: 480, y: 0, width: 40, height: 600), lens: CGPoint(x: 700, y: 40))
+    expect("book: the picture is on the cameras' half", book.picture,
+           CGRect(x: 535, y: 0, width: 450, height: 600))
+    expect("book: the shutter is on the other half", book.shutter,
+           CGRect(x: 204, y: 264, width: 72, height: 72))
+
+    // Half-folded on a table: the fold runs across, and the cameras are on the top half
+    // (y 0 to 480). The picture takes that half's height: 480 tall, 360 wide, x = (600 - 360) / 2.
+    // The shutter is centered in the bottom half (y 520 to 1000): center (300, 760).
+    let table = Layout(in: CGSize(width: 600, height: 1000),
+                       fold: CGRect(x: 0, y: 480, width: 600, height: 40), lens: CGPoint(x: 40, y: 300))
+    expect("table: the picture is on the cameras' half", table.picture,
+           CGRect(x: 120, y: 0, width: 360, height: 480))
+    expect("table: the shutter is on the other half", table.shutter,
+           CGRect(x: 264, y: 724, width: 72, height: 72))
+
+    // The same table with the cameras on the bottom half: the two change places.
+    let turned = Layout(in: CGSize(width: 600, height: 1000),
+                        fold: CGRect(x: 0, y: 480, width: 600, height: 40), lens: CGPoint(x: 40, y: 700))
+    expect("table, cameras below: the picture is on the bottom half", turned.picture,
+           CGRect(x: 120, y: 520, width: 360, height: 480))
+    expect("table, cameras below: the shutter is on the top half", turned.shutter,
+           CGRect(x: 264, y: 204, width: 72, height: 72))
 }
