@@ -33,7 +33,7 @@ struct Inset {
     }
 
     /// The same inset, pushed back so that it stays one margin inside the photo.
-    private func keptInside() -> Inset {
+    fileprivate func keptInside() -> Inset {
         var inset = self
         let nearest = Inset.margin + size / 2
         inset.center.x = min(max(center.x, nearest), 1 - nearest)
@@ -49,5 +49,13 @@ struct Inset {
             width: size * photo.width,
             height: size * photo.height
         )
+    }
+}
+
+extension Inset {
+    /// A starting inset centered as near to `point` as the margin allows.
+    /// `point` is a fraction of the photo, like `center`, and may lie outside the photo.
+    init(near point: CGPoint) {
+        self = Inset(center: point).keptInside()
     }
 }

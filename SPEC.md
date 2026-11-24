@@ -15,7 +15,7 @@ Status: agreed in a design interview on 2026-11-13, then cut down once with the 
 | Distribution | Installed on the phone from this Mac. No App Store, no TestFlight. |
 | Output | One image: rear photo full-frame with the selfie baked into the corner, exactly as the preview shows. |
 | Shape | Portrait only. The app does not rotate. The photo keeps the shape the camera format delivers, with no cropping: 3:4 if layer 1 finds a 4:3 format, otherwise 9:16. The inset has the same shape. |
-| Inset | Starts in the top-left corner at a quarter of the photo, with rounded corners. A tap on it swaps which camera is the inset, and the two pictures ease into their new sizes over a quarter second (Max wants this animation kept). A drag moves it and a pinch resizes it, between 15% and half of the photo, always inside the photo (all added 2026-11-23). |
+| Inset | Starts on the front camera, or in the corner nearest to it (2026-11-23; before that, the top-left corner), at a quarter of the photo, with rounded corners. A tap on it swaps which camera is the inset, and the two pictures ease into their new sizes over a quarter second (Max wants this animation kept). A drag moves it and a pinch resizes it, between 15% and half of the photo, always inside the photo (all added 2026-11-23). |
 | Selfie | Mirrored, as the preview shows it. |
 | Rear lens | Main wide lens only. |
 | Controls | One shutter button. The volume buttons also fire the shutter. |
@@ -181,9 +181,9 @@ This is TODO's "Make rotation work". Max reported after the layout change that t
 
 ## 📍 Where the cameras and the fold are (measured 2026-11-23)
 
-An experiment for two TODO items: the camera cutout over the picture, and the selfie under the camera. No app code changed.
+An experiment for two TODO items: the camera cutout over the picture, and the selfie under the camera. The result that was built is at the end of this section.
 
-- **How:** a temporary `GeometryReader` that ignores the safe area printed `reservedRegions(kind: .occlusion)` and `reservedRegions(kind: .division)` in each pose, set with Device Hub. The method needs iOS 27.1; the project's minimum is lower, so it needs an `if #available`. A region has `frame`, `margins`, `isActive` and `kind`. All numbers are points in the full screen, origin top left.
+- **How:** a temporary `GeometryReader` that ignores the safe area printed `reservedRegions(kind: .occlusion)` and `reservedRegions(kind: .division)` in each pose, set with Device Hub. The method needs iOS 27.1, so the project's minimum went from 27.0 to 27.1 on Max's instruction. A region has `frame`, `margins`, `isActive` and `kind`. All numbers are points in the full screen, origin top left.
 - **Every pose reports two occlusions:** the front camera, and the status strip (84 by 124 to 196, or 144 by 82, in a top corner). The status strip is already outside the safe area. The camera is not.
 - **The inner camera is inside the safe area**, about 22 points from one edge, so the picture can run under it. It was `isActive: true` in every pose, as expected: the app always uses the front camera.
 
@@ -197,6 +197,9 @@ An experiment for two TODO items: the camera cutout over the picture, and the se
 
 - **In the three covered poses the picture can slide clear without shrinking** (worked out from the numbers, not built): on the tall screen the picture and shutter strip need 598 of 835 points, so they fit entirely above or below the camera; on the upside-down wide screen they need 572 points and 575 are free to the right of the camera.
 - **The fold:** only the half-folded pose reports a division: `frame` 455.5, 0, 40, 669 on the wide screen, with 20-point margins on each side. Fully open and closed report none. Today the picture (x 147 to 624) crosses it.
+- **Built: the selfie inset starts on the camera** (`Inset(near:)`, tested; `LunchCamApp.swift`). Max does not mind the inset lying on the under-screen camera and said it sometimes helps, so the picture stays where it is and is not slid clear. The inset is centered as near to the camera as its margin allows: on the camera when the lens is under the picture, otherwise in the nearest corner. It follows the camera through folds and turns until a drag or pinch places it; after that it stays where Max put it for the rest of the run.
+- **Which occlusion is the camera:** the system does not say. The app takes the smallest one (camera 62 by 40 at most, status strip 84 by 124 at least).
+- **Seen in Device Hub with the tint:** closed and open on the wide screen, the inset is in the top right corner beside the camera; in the three other open orientations it lies on the camera. Not checked with real pictures, and not by Max's hand.
 - **Not measured:** half-folded on the tall screen (tabletop). Device Hub's rotate button did nothing on the first press in one pose; the second press worked.
 
 ## ✂️ Five-step pass (2026-11-13)

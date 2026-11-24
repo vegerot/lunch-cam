@@ -27,13 +27,27 @@ struct CameraView: View {
     @State private var landscape = false
     /// True while the cameras deliver blank frames instead of pictures.
     @State private var blank = false
+    /// Where the front camera sits on the screen, once the system has said so.
+    @State private var lens: CGRect?
+    /// True once a drag or pinch has placed the inset. Until then it follows the front camera.
+    @State private var placed = false
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            // The whole screen, because the camera can lie outside the safe area.
+            GeometryReader { screen in
+                // The system reports the camera and the status strip without saying which is which.
+                // The camera is the smaller one: 62x40 points at most, the strip 84x124 at least.
+                let camera = screen.reservedRegions(kind: .occlusion).map(\.frame)
+                    .min { $0.width * $0.height < $1.width * $1.height }
+                Color.black.onChange(of: camera, initial: true) { lens = camera }
+            }
+            .ignoresSafeArea()
             // Laid out from the space the app is given, which changes when the phone folds or turns.
             GeometryReader { space in
                 let layout = Layout(in: space.size, landscape: landscape)
+                let origin = space.frame(in: .global).origin
+                let picture = layout.picture.offsetBy(dx: origin.x, dy: origin.y)
                 preview(front: swapped)
                     .overlay {
                         GeometryReader { photo in
@@ -64,6 +78,7 @@ struct CameraView: View {
                                         }
                                         .onEnded { _ in
                                             gestureStart = nil
+                                            placed = true
                                             print("inset: center \(inset.center), size \(inset.size)")
                                         }
                                 )
@@ -73,6 +88,17 @@ struct CameraView: View {
                     }
                     .frame(width: layout.picture.width, height: layout.picture.height)
                     .position(x: layout.picture.midX, y: layout.picture.midY)
+                    // The inset starts on the front camera, or in the corner nearest to it, so that
+                    // looking at yourself is looking at the lens. It follows the camera through
+                    // folds and turns until a drag or pinch places it.
+                    .onChange(of: [lens, picture], initial: true) {
+                        guard let lens, !placed else { return }
+                        inset = Inset(near: CGPoint(
+                            x: (lens.midX - picture.minX) / picture.width,
+                            y: (lens.midY - picture.minY) / picture.height
+                        ))
+                        print("inset near the camera: center \(inset.center)")
+                    }
                 Button(action: { shoot(via: "screen button") }) {
                     Circle()
                         .fill(.white)

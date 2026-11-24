@@ -18,7 +18,7 @@ func expect(_ name: String, _ actual: CGRect, _ expected: CGRect) {
 enum InsetTests {
     static func main() {
         // A quarter of the photo, 3% of the photo away from the top-left corner.
-        expect("starts in the top-left corner", Inset().frame(in: photo),
+        expect("with no camera known, it starts in the top-left corner", Inset().frame(in: photo),
                CGRect(x: 43.2, y: 57.6, width: 360, height: 480))
         // Half the photo right and down: 0.5 * 1440 = 720 and 0.5 * 1920 = 960 added to the start.
         expect("a drag moves it", Inset().moved(by: CGSize(width: 0.5, height: 0.5)).frame(in: photo),
@@ -42,6 +42,14 @@ enum InsetTests {
         // Grown in the top-left corner, it would poke out of the photo; it is pushed back in.
         expect("a pinch in a corner stays inside the photo", Inset().scaled(by: 2).frame(in: photo),
                CGRect(x: 43.2, y: 57.6, width: 720, height: 960))
+        // A camera in the photo's lower left, at 24% across and 94% down, gets the inset on top of it
+        // as far as the margin allows: across 0.24 fits, down stops at 1 - 0.03 - 0.125 = 0.845.
+        // x = (0.24 - 0.125) * 1440, y = (0.845 - 0.125) * 1920.
+        expect("it starts on a camera under the photo", Inset(near: CGPoint(x: 0.24, y: 0.94)).frame(in: photo),
+               CGRect(x: 165.6, y: 1382.4, width: 360, height: 480))
+        // A camera outside the photo, up and to the right, gets the nearest corner.
+        expect("or in the corner nearest a camera outside it", Inset(near: CGPoint(x: 1.1, y: -0.2)).frame(in: photo),
+               CGRect(x: 1036.8, y: 57.6, width: 360, height: 480))
         layoutTests()
         exit(failures == 0 ? 0 : 1)
     }
