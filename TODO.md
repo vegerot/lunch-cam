@@ -1,5 +1,6 @@
 ## Medium
 
+* Optimize for iPhone Duo
 * Make rotation work
 
 ## Low
