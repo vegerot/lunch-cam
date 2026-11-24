@@ -22,6 +22,7 @@ Status: agreed in a design interview on 2026-11-13, then cut down once with the 
 | After the shutter | The photo saves to the Photos library, then the iOS share sheet opens with it. |
 | Permissions | Camera, and add-only Photos access (the app can save, not read). |
 | Name | "Lunch Cam", bundle ID `com.vegerot.lunchcam`. |
+| Icon | A bowl of ramen inside a camera lens, on orange. Made by `gpt-image-2.6-sunburst` on 2026-11-23 from prompt `b-lens` in `icon-candidates/prompts.json`; Max chose it from seven candidates. |
 | Location | `lunch-cam/` in the `ai-conversations` repository. It moves to its own repository later. |
 | Signing | Max's Personal Team, `GWKJRP4KM9`. It is a free team, so the app expires after 7 days and needs a reinstall. |
 

@@ -1,8 +1,3 @@
-## High
-
-* App icon
-
-
 ## Medium
 
 * Make rotation work
