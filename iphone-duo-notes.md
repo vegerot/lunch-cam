@@ -76,8 +76,8 @@ Lunch Cam today: built with Xcode 27.2, so the third row applies.
 | --- | --- | --- | --- |
 | 1 | ✅ Fixed 2026-11-23 (`Layout.swift`). The shutter sat on the picture's bottom edge on the outer display. | Seen in Max's recording of 2026-11-23. The outer display is nearly the photo's 3:4 shape, so nothing is left below. | Small |
 | 2 | ✅ Lock removed 2026-11-23; the shutter moves beside the picture when open. Tabletop layout still open. The app was portrait-only, so it was scaled on the inner display. | `UISupportedInterfaceOrientations = Portrait` in the project; Apple's rule above. Not looked at on the phone. | Small to remove the lock; medium to lay out well |
-| 3 | The upright angle is read once at startup. | `Camera.swift` reads `videoRotationAngleForHorizonLevelPreview` once. Apple says it changes between displays. Not tested by opening the phone. | Medium. Same work as "Make rotation work". |
-| 4 | Sensor-orientation compensation is left on. | Not set anywhere in our code. | Small, after 3 |
+| 3 | ✅ Fixed 2026-11-23: every new angle is applied. The upright angle was read once at startup. | `Camera.swift` reads `videoRotationAngleForHorizonLevelPreview` once. Apple says it changes between displays. Not tested by opening the phone. | Medium. Same work as "Make rotation work". |
+| 4 | Does not apply: it is a setting of `AVCapturePhotoOutput`, which we do not use. Sensor-orientation compensation is left on. | Not set anywhere in our code. | Small, after 3 |
 | 5 | The front camera is the virtual one, capped at 1080p. | We ask for `.builtInWideAngleCamera` at `.front`. We use 1920x1440, which layer 1 measured as available. | No action. The cap does not bind us. |
 
 Already fine, checked against the `app-resizability` skill's list: no use of the main screen, device type, or interface orientation; sizes come from `GeometryReader`; a launch screen is declared; no full-screen opt-out.

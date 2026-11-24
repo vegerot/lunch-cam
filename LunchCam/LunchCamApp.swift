@@ -23,13 +23,15 @@ struct CameraView: View {
     @State private var inset = Inset()
     /// The inset as it was when the current drag or pinch began.
     @State private var gestureStart: Inset?
+    /// True while the phone is held sideways and the cameras deliver wide pictures.
+    @State private var landscape = false
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             // Laid out from the space the app is given, which changes when the phone folds or turns.
             GeometryReader { space in
-                let layout = Layout(in: space.size)
+                let layout = Layout(in: space.size, landscape: landscape)
                 preview(front: swapped)
                     .overlay {
                         GeometryReader { photo in
@@ -79,7 +81,10 @@ struct CameraView: View {
                 .position(x: layout.shutter.midX, y: layout.shutter.midY)
             }
         }
-        .task { await camera.start() }
+        .task {
+            camera.onTurn = { landscape = $0 }
+            await camera.start()
+        }
         // The volume buttons (and other hardware capture buttons) fire the shutter on release.
         .onCameraCaptureEvent { event in
             if event.phase == .ended { shoot(via: "hardware button") }
@@ -98,11 +103,16 @@ struct CameraView: View {
                 if ProcessInfo.processInfo.arguments.contains("--tint") {
                     (front ? Color.red : Color.green).opacity(0.4)
                         .overlay {
-                            Text(front ? "F" : "B")
-                                .font(.system(size: 200, weight: .bold))
-                                .minimumScaleFactor(0.1)
-                                .foregroundStyle(.white)
-                                .padding(8)
+                            // The letter is turned as far as the camera's picture is from upright,
+                            // so a sideways camera shows a sideways letter. Checked twice a second.
+                            TimelineView(.periodic(from: .now, by: 0.5)) { _ in
+                                Text(front ? "F" : "B")
+                                    .font(.system(size: 200, weight: .bold))
+                                    .minimumScaleFactor(0.1)
+                                    .foregroundStyle(.white)
+                                    .padding(8)
+                                    .rotationEffect(.degrees(camera.tilt(front: front)))
+                            }
                         }
                         .allowsHitTesting(false)
                 }

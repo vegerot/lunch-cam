@@ -160,7 +160,19 @@ First step of "Optimize for iPhone Duo". Background and sources: `iphone-duo-not
 - **Rule** (`LunchCam/Layout.swift`, pure, tested): the shutter gets a strip of its own, 96 points wide, below the picture or beside it, whichever leaves the larger 3:4 picture. The picture and the strip are centered together. The shutter never covers the picture; in a space with no spare room the picture shrinks instead.
 - **Orientation lock removed.** The project allowed portrait only. Apple says the inner display ignores that and scales such an app. All four orientations are now allowed, and the layout follows the space it is given.
 - **Seen in Device Hub with `--tint`** (layout only, cameras are black there): closed, the shutter sits below the picture; open, it sits to the right of the picture. Before, it covered the picture's bottom edge in both.
-- **Not done yet:** half-folded, the picture still crosses the fold (tabletop mode); the cameras' upright angle is still read once at startup, so real pictures may be sideways after a fold or a turn. Not checked with real cameras: Max has not held the phone since this change.
+- **Not done yet:** half-folded, the picture still crosses the fold (tabletop mode); the camera cutout of the open display covers a corner of the picture.
+
+## 🔄 Rotation result (2026-11-23)
+
+This is TODO's "Make rotation work". Max reported after the layout change that the cameras did not turn with the layout.
+
+- **Cause:** each camera's upright angle was read once at startup. The phone asks for a new angle when it turns, and when it opens or closes.
+- **Fix** (`Camera.swift`): each camera keeps its rotation coordinator and applies every new angle to its preview and to its saved frames. Both use the preview's angle, so the photo is what the screen showed.
+- **The picture's shape follows the cameras.** The sensors are wide, so at 0 or 180 degrees the upright picture is 4:3, and `Layout` gets `landscape: true`. Measured on this phone: closed and upright 90 (rear) and 270 (front), a tall picture; open and upright 180 and 180, a wide picture; open after a quarter turn 270 and 90, a tall picture.
+- **Tint mode now shows this bug.** Each letter is turned by the angle its preview has minus the angle the phone asks for. Reproduced in Device Hub: with the angle frozen at its startup value, opening and turning the phone laid both letters on their side; with the fix they stay upright in every pose.
+- **Limit of that check:** the letters compare two angles. They do not look at the pixels, which are black in Device Hub. Whether real pictures are upright, and the selfie mirrored the right way, in each pose needs Max holding the phone.
+- **A deadlock, found and fixed on the way:** the main thread must not wait for the camera queue, because connecting a preview layer on the camera queue waits for the main thread. iOS killed the app at launch (signal 9).
+- **Not applicable:** Apple's advice to turn off sensor-orientation compensation is a setting of `AVCapturePhotoOutput`, which the app does not use.
 
 ## ✂️ Five-step pass (2026-11-13)
 

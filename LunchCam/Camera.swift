@@ -15,6 +15,13 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     private var latestRear: CVPixelBuffer?
     private var latestFront: CVPixelBuffer?
 
+    /// Called on the main queue when the pictures change shape: true when the phone is held
+    /// sideways and the pictures are wide (4:3), false when they are tall (3:4).
+    var onTurn: (_ landscape: Bool) -> Void = { _ in }
+    // Kept alive so they keep reporting; each belongs to one camera.
+    private var coordinators: [AVCaptureDevice.RotationCoordinator] = []
+    private var angleObservations: [NSKeyValueObservation] = []
+
     override init() {
         super.init()
         for preview in [rearPreview, frontPreview] {
@@ -38,11 +45,25 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
             connect(.back, preview: rearPreview, frames: rearFrames)
             connect(.front, preview: frontPreview, frames: frontFrames)
             session.commitConfiguration()
+            DispatchQueue.main.async { [coordinators] in self.connected = coordinators }
             session.startRunning()
             // A cost above 1 means the phone cannot run this combination of formats.
             print("running: \(session.isRunning), hardwareCost: \(session.hardwareCost)")
         }
     }
+
+    /// For tint mode: how far a camera's picture is from upright, in degrees. It is the angle
+    /// its preview really has minus the angle the phone asks for, so 0 means upright.
+    func tilt(front: Bool) -> Double {
+        // The rear camera is connected first. Before both are connected there is no picture.
+        guard connected.count == 2 else { return 0 }
+        let asked = connected[front ? 1 : 0].videoRotationAngleForHorizonLevelPreview
+        let has = (front ? frontPreview : rearPreview).connection?.videoRotationAngle ?? asked
+        return has - asked
+    }
+    /// The coordinators again, for the main thread, set once both cameras are connected.
+    /// `tilt` must not wait for `queue`: connecting a preview waits for the main thread in turn.
+    private var connected: [AVCaptureDevice.RotationCoordinator] = []
 
     /// The two latest frames as one image: one camera full-frame, the other at `inset`.
     /// The rear camera is the full frame unless `swapped`.
@@ -106,20 +127,38 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         frames.setSampleBufferDelegate(self, queue: queue)
         session.addOutputWithNoConnections(frames)
 
-        // Ask for the upright angle instead of assuming 90: on this phone the front sensor
-        // is mounted differently from the rear one (a fixed 90 showed the selfie upside down).
-        let upright = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: preview)
-            .videoRotationAngleForHorizonLevelPreview
-        print("\(position == .front ? "front" : "rear") upright angle: \(upright)")
-
-        for connection in [
+        let connections = [
             AVCaptureConnection(inputPort: port, videoPreviewLayer: preview),
             AVCaptureConnection(inputPorts: [port], output: frames),
-        ] {
+        ]
+        for connection in connections {
             session.addConnection(connection)
             connection.automaticallyAdjustsVideoMirroring = false
             connection.isVideoMirrored = position == .front
-            connection.videoRotationAngle = upright
         }
+
+        // Ask for the upright angle instead of assuming 90: on this phone the front sensor
+        // is mounted differently from the rear one (a fixed 90 showed the selfie upside down).
+        // The angle changes when the phone turns, and when it opens or closes, so keep asking.
+        // The saved frames use the preview's angle, so the photo is what the screen showed.
+        let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: preview)
+        func turn(to upright: CGFloat) {
+            print("\(position == .front ? "front" : "rear") upright angle: \(upright)")
+            for connection in connections { connection.videoRotationAngle = upright }
+            // Both cameras turn together, so one of them reporting the shape is enough.
+            // The sensors are wide: at 0 or 180 degrees the picture stays wide.
+            if position == .back {
+                let landscape = upright.truncatingRemainder(dividingBy: 180) == 0
+                DispatchQueue.main.async { self.onTurn(landscape) }
+            }
+        }
+        turn(to: coordinator.videoRotationAngleForHorizonLevelPreview)
+        // Changes arrive on the main queue. The first value does not arrive, hence the line above.
+        angleObservations.append(
+            coordinator.observe(\.videoRotationAngleForHorizonLevelPreview, options: .new) { _, change in
+                turn(to: change.newValue!) // `.new` always carries the new value
+            }
+        )
+        coordinators.append(coordinator)
     }
 }

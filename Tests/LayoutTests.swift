@@ -32,4 +32,14 @@ func layoutTests() {
            CGRect(x: 28.5, y: 0, width: 333, height: 444))
     expect("snug space: the shutter does not cover the picture", snug.shutter,
            CGRect(x: 159, y: 456, width: 72, height: 72))
+
+    // The phone held sideways gives a 4:3 picture. In the same wide space, a strip below would
+    // leave (600 - 96) * 4/3 = 672 wide; a strip beside leaves the full height: 600 tall, 800 wide.
+    // Picture plus strip is 896 wide, centered in 1000: it starts at 52.
+    // The shutter's center is 48 right of the picture's right edge (852): x = 900, y = 300.
+    let sideways = Layout(in: CGSize(width: 1000, height: 600), landscape: true)
+    expect("sideways: the picture is 4:3", sideways.picture,
+           CGRect(x: 52, y: 0, width: 800, height: 600))
+    expect("sideways: the shutter sits beside the picture", sideways.shutter,
+           CGRect(x: 864, y: 264, width: 72, height: 72))
 }

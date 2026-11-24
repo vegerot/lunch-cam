@@ -3,7 +3,7 @@ import CoreGraphics
 /// Where the picture and the shutter go in the space the app is given.
 /// The shutter gets a strip of its own next to the picture, so it never covers the picture.
 struct Layout {
-    /// The 3:4 picture.
+    /// The picture: 3:4, or 4:3 when the phone is held sideways.
     let picture: CGRect
     /// The shutter button.
     let shutter: CGRect
@@ -12,13 +12,14 @@ struct Layout {
     /// The width of the shutter's strip: the shutter with 12 of room on each side.
     static let strip = 96.0
 
-    init(in space: CGSize) {
+    init(in space: CGSize, landscape: Bool = false) {
+        let shape = landscape ? 4.0 / 3 : 3.0 / 4 // width over height
         // The strip goes below the picture or beside it, whichever leaves the larger picture.
-        let widthWithStripBelow = min(space.width, (space.height - Layout.strip) * 3 / 4)
-        let widthWithStripBeside = min(space.width - Layout.strip, space.height * 3 / 4)
+        let widthWithStripBelow = min(space.width, (space.height - Layout.strip) * shape)
+        let widthWithStripBeside = min(space.width - Layout.strip, space.height * shape)
         let below = widthWithStripBelow >= widthWithStripBeside
         let width = max(widthWithStripBelow, widthWithStripBeside)
-        let height = width * 4 / 3
+        let height = width / shape
         // The picture and the strip are centered together.
         let size = CGSize(width: Layout.shutterSize, height: Layout.shutterSize)
         if below {
