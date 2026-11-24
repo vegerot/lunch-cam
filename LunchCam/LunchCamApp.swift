@@ -93,7 +93,22 @@ struct CameraView: View {
                                                     height: drag.height / photo.size.height
                                                 ))
                                         }
-                                        .onEnded { _ in
+                                        .onEnded { value in
+                                            // PROTOTYPE: a flick keeps gliding. The system predicts where
+                                            // the drag would come to rest from the finger's speed at release;
+                                            // the inset eases there, and stops at the photo's edge.
+                                            let start = gestureStart ?? inset
+                                            let drag = value.first?.translation ?? .zero
+                                            let rest = value.first?.predictedEndTranslation ?? drag
+                                            print("flick: released at \(drag), glides to \(rest)")
+                                            withAnimation(.spring(duration: 0.5, bounce: 0)) {
+                                                inset = start
+                                                    .scaled(by: Double(value.second?.magnification ?? 1))
+                                                    .moved(by: CGSize(
+                                                        width: rest.width / photo.size.width,
+                                                        height: rest.height / photo.size.height
+                                                    ))
+                                            }
                                             gestureStart = nil
                                             placed = true
                                             print("inset: center \(inset.center), size \(inset.size)")
