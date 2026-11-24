@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
 
 # Lunch Cam developer commands for the paired iPhone.
-#   dev install [--console] [--tint]
-#                            Build, install and launch. Unlock the phone first.
+#   dev install [--console]  Build, install and launch. Unlock the phone first.
 #                            --console keeps showing the app's output; stopping it stops the app.
-#                            --tint colors the two camera pictures (red F = front, green B = back),
-#                            for Device Hub, where both cameras are black. Only for this launch.
-#                            A letter lying on its side means that camera's picture is not upright.
 #   dev photo [file]         Copy the last photo the app took to file (default: last.jpg).
 #                            The app keeps that debug copy; delete this command when the copy goes.
 #   dev test                 Run the inset and layout geometry tests on this Mac. No phone needed.
@@ -25,16 +21,8 @@ install)
     { grep --invert-match --extended-regexp 'IDESchemeActionsInvocationRecord|headermap|swift-frontend' || true; }
   xcrun devicectl device install app --device "$DEVICE" \
     build/Build/Products/Debug-iphoneos/LunchCam.app
-  launch_options=() app_arguments=()
-  for option in "${@:2}"; do
-    case "$option" in
-    --console) launch_options+=("$option") ;;
-    --tint) app_arguments+=("$option") ;;
-    *) echo "unknown option: $option" >&2 && exit 2 ;;
-    esac
-  done
   exec xcrun devicectl device process launch --device "$DEVICE" \
-    --terminate-existing "${launch_options[@]}" "$APP" "${app_arguments[@]}"
+    --terminate-existing ${2:+"$2"} "$APP"
   ;;
 photo)
   file="${2:-last.jpg}"
@@ -47,7 +35,7 @@ test)
   exec build/tests
   ;;
 *)
-  sed -n '3,12p' "$(basename "$0")" # the usage comment above; the `cd` put us next to the script
+  sed -n '3,8p' "$(basename "$0")" # the usage comment above; the `cd` put us next to the script
   exit 2
   ;;
 esac

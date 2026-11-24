@@ -25,6 +25,8 @@ struct CameraView: View {
     @State private var gestureStart: Inset?
     /// True while the phone is held sideways and the cameras deliver wide pictures.
     @State private var landscape = false
+    /// True while the cameras deliver blank frames instead of pictures.
+    @State private var blank = false
 
     var body: some View {
         ZStack {
@@ -82,7 +84,9 @@ struct CameraView: View {
             }
         }
         .task {
-            camera.onTurn = { landscape = $0 }
+            // Eased, so the picture changes shape along with the screen's own rotation.
+            camera.onTurn = { turned in withAnimation(.easeInOut(duration: 0.3)) { landscape = turned } }
+            camera.onBlank = { blank = $0 }
             await camera.start()
         }
         // The volume buttons (and other hardware capture buttons) fire the shutter on release.
@@ -94,13 +98,13 @@ struct CameraView: View {
         }
     }
 
-    /// One camera's live picture. With the `--tint` launch argument (`./dev install --tint`)
-    /// it gets a colored layer and a letter: red F for the front camera, green B for the back.
-    /// Device Hub gives apps black camera frames, so without this the two pictures look alike.
+    /// One camera's live picture. While the cameras deliver blank frames, which they do when
+    /// Xcode's Device Hub controls the phone, it gets a colored layer and a letter instead:
+    /// red F for the front camera, green B for the back. Otherwise both pictures are black.
     private func preview(front: Bool) -> some View {
         Preview(layer: front ? camera.frontPreview : camera.rearPreview)
             .overlay {
-                if ProcessInfo.processInfo.arguments.contains("--tint") {
+                if blank {
                     (front ? Color.red : Color.green).opacity(0.4)
                         .overlay {
                             // The letter is turned as far as the camera's picture is from upright,

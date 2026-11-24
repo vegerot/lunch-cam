@@ -15,6 +15,13 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     private var latestRear: CVPixelBuffer?
     private var latestFront: CVPixelBuffer?
 
+    /// Called on the main queue when the cameras stop or start delivering real pictures.
+    /// They deliver blank ones while Xcode's Device Hub controls the phone.
+    var onBlank: (_ blank: Bool) -> Void = { _ in }
+    // Only touched on `queue`.
+    private var frameCount = 0
+    private var blank = false
+
     /// Called on the main queue when the pictures change shape: true when the phone is held
     /// sideways and the pictures are wide (4:3), false when they are tall (3:4).
     var onTurn: (_ landscape: Bool) -> Void = { _ in }
@@ -52,7 +59,7 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         }
     }
 
-    /// For tint mode: how far a camera's picture is from upright, in degrees. It is the angle
+    /// For the tint: how far a camera's picture is from upright, in degrees. It is the angle
     /// its preview really has minus the angle the phone asks for, so 0 means upright.
     func tilt(front: Bool) -> Double {
         // The rear camera is connected first. Before both are connected there is no picture.
@@ -98,6 +105,24 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     ) {
         let frame = CMSampleBufferGetImageBuffer(sampleBuffer)
         if output === rearFrames { latestRear = frame } else { latestFront = frame }
+
+        // Once a second, look whether the rear camera is delivering a real picture.
+        guard output === rearFrames, let frame else { return }
+        frameCount += 1
+        guard frameCount % 30 == 0 else { return }
+        // Xcode's Device Hub gives apps frames where every pixel is the same black (measured:
+        // brightness 16 everywhere). A real sensor has noise even with the lens covered.
+        // Force unwrap: the cameras deliver two-plane frames, brightness first (measured).
+        CVPixelBufferLockBaseAddress(frame, .readOnly)
+        let brightness = CVPixelBufferGetBaseAddressOfPlane(frame, 0)!.assumingMemoryBound(to: UInt8.self)
+        let count = CVPixelBufferGetBytesPerRowOfPlane(frame, 0) * CVPixelBufferGetHeightOfPlane(frame, 0)
+        let nowBlank = stride(from: 0, to: count, by: 997).allSatisfy { brightness[$0] == brightness[0] }
+        CVPixelBufferUnlockBaseAddress(frame, .readOnly)
+        if nowBlank != blank {
+            blank = nowBlank
+            print("cameras blank: \(nowBlank)")
+            DispatchQueue.main.async { self.onBlank(nowBlank) }
+        }
     }
 
     private func connect(
@@ -144,7 +169,11 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: preview)
         func turn(to upright: CGFloat) {
             print("\(position == .front ? "front" : "rear") upright angle: \(upright)")
-            for connection in connections { connection.videoRotationAngle = upright }
+            // The preview turns at once: it is only a transform. Turning the saved frames takes
+            // about 0.3 seconds per camera (measured), so that happens on the camera queue.
+            // On the main thread it froze the app for 0.6 seconds in the middle of every turn.
+            connections[0].videoRotationAngle = upright
+            queue.async { connections[1].videoRotationAngle = upright }
             // Both cameras turn together, so one of them reporting the shape is enough.
             // The sensors are wide: at 0 or 180 degrees the picture stays wide.
             if position == .back {
