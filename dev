@@ -12,10 +12,11 @@ APP="com.vegerot.lunchcam"
 
 case "${1:-}" in
 install)
-  # The filter drops lines Xcode prints on every build for this phone. They are not errors.
+  # A generic destination builds while the phone is locked; only the install needs the phone.
+  # The filter drops a line Xcode prints on every such build. It is not an error.
   xcodebuild -project LunchCam.xcodeproj -scheme LunchCam -configuration Debug \
-    -destination "id=$DEVICE" -derivedDataPath build -allowProvisioningUpdates -quiet build 2>&1 |
-    { grep --invert-match --extended-regexp 'DVTDevice|IDERunDestination|headermap' || true; }
+    -destination generic/platform=iOS -derivedDataPath build -allowProvisioningUpdates -quiet build 2>&1 |
+    { grep --invert-match --extended-regexp 'IDESchemeActionsInvocationRecord|headermap' || true; }
   xcrun devicectl device install app --device "$DEVICE" \
     build/Build/Products/Debug-iphoneos/LunchCam.app
   exec xcrun devicectl device process launch --device "$DEVICE" \
