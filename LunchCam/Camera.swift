@@ -1,14 +1,6 @@
 import AVFoundation
 import UIKit
 
-/// Where the selfie inset sits, as fractions of the photo width.
-/// The preview and the saved photo both use these, so they match.
-enum Inset {
-    static let size = 0.25
-    static let margin = 0.03
-    static let cornerRadius = 0.03
-}
-
 /// Runs the rear wide camera and the front camera together.
 /// Each camera feeds a preview layer, and a data output that keeps its latest frame for the shutter.
 final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
@@ -52,9 +44,9 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         }
     }
 
-    /// The two latest frames as one image: one camera full-frame, the other inset top-left.
+    /// The two latest frames as one image: one camera full-frame, the other at `inset`.
     /// The rear camera is the full frame unless `swapped`.
-    func photo(swapped: Bool) -> UIImage? {
+    func photo(swapped: Bool, inset: Inset) -> UIImage? {
         let (rear, front) = queue.sync { (latestRear, latestFront) }
         guard let rear, let front else { return nil }
 
@@ -68,12 +60,7 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         let insetImage = image(swapped ? rear : front)
 
         let size = fullImage.size
-        let insetFrame = CGRect(
-            x: size.width * Inset.margin,
-            y: size.width * Inset.margin,
-            width: size.width * Inset.size,
-            height: size.height * Inset.size
-        )
+        let insetFrame = inset.frame(in: size)
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1 // one image pixel per camera pixel
         return UIGraphicsImageRenderer(size: size, format: format).image { _ in

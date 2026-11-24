@@ -15,7 +15,7 @@ Status: agreed in a design interview on 2026-11-13, then cut down once with the 
 | Distribution | Installed on the phone from this Mac. No App Store, no TestFlight. |
 | Output | One image: rear photo full-frame with the selfie baked into the corner, exactly as the preview shows. |
 | Shape | Portrait only. The app does not rotate. The photo keeps the shape the camera format delivers, with no cropping: 3:4 if layer 1 finds a 4:3 format, otherwise 9:16. The inset has the same shape. |
-| Inset | Top-left corner, about a quarter of the photo width, rounded corners, fixed in place. A tap on the inset swaps which camera is the inset (added 2026-11-23). |
+| Inset | Starts in the top-left corner at a quarter of the photo, with rounded corners. A tap on it swaps which camera is the inset. A drag moves it and a pinch resizes it, between 15% and half of the photo, always inside the photo (all added 2026-11-23). |
 | Selfie | Mirrored, as the preview shows it. |
 | Rear lens | Main wide lens only. |
 | Controls | One shutter button. The volume buttons also fire the shutter. |
@@ -40,7 +40,6 @@ The cost is resolution, which is roughly video quality. Layer 1 measures the rea
 Version 1 builds nothing in advance for these.
 
 - 🎥 Video and Live Photos.
-- 🤏 Drag the inset and pinch to resize it.
 - 🏷️ Photo metadata, such as location.
 - 🔦 Flash, timer, zoom, lens switching, settings screen, in-app gallery.
 
@@ -56,7 +55,7 @@ Every milestone and every experiment gets its own Sapling commit that touches on
 
 ## ✅ Testing
 
-- No automated unit tests.
+- One automated test: `./dev test` checks the inset geometry (`LunchCam/Inset.swift`) on the Mac in about a second. Everything else is checked by hand on the phone.
 - **Claude watches the phone's screen** through QuickTime Player (File ▸ New Movie Recording, with the iPhone as the camera). It shows the camera and is view only, so Max does the taps.
 - **Claude checks** each layer through the app's console output: the app launches, the session runs, nothing crashes. iPhone Mirroring cannot show the camera: it replaces the app with the notice "iPhone camera is not available from Mac" (measured 2026-11-13). From layer 3 on, Claude copies the saved photo off the phone and looks at it.
 - **Max checks** on the physical phone, with iPhone Mirroring disconnected: the layer 2 preview, the layer 3 photo, and the layer 4 volume buttons. Claude also analyzes it and gives an opinion.
@@ -68,14 +67,15 @@ A Mac test harness for the compositor is not built: the phone loop is one comman
 
 ## 🛠️ Build and install
 
-`lunch-cam/dev` is one shell script with two subcommands:
+`lunch-cam/dev` is one shell script with three subcommands:
 
 - `./dev install` builds with `xcodebuild`, installs with `devicectl` (Apple's device command-line tool), and launches the app. Adding `--console` keeps showing the app's output; stopping it stops the app. This is also the weekly reinstall.
 - `./dev photo [file]` copies the last photo off the phone, for as long as the app keeps its debug copy.
+- `./dev test` runs the inset geometry tests on the Mac.
 
 Max never needs to open Xcode.
 
-The script is 34 lines. Max waived the 20-line limit for it after a Swift version was tried: Swift needed 64 lines (53 of code) against 29 (17 of code) for the two original shell scripts together, because running commands is what shell does natively.
+The script was 34 lines then (41 now, with three subcommands). Max waived the 20-line limit for it after a Swift version was tried: Swift needed 64 lines (53 of code) against 29 (17 of code) for the two original shell scripts together, because running commands is what shell does natively.
 
 ## 📱 Environment (measured 2026-11-13)
 
@@ -136,6 +136,17 @@ A tap on the inset swaps the two cameras in the preview and in the saved photo. 
 - Console: `shot via screen button, swapped true: 1440x1920`, then `saved to Photos: true`.
 - Claude looked at the photo copied off the phone: the selfie is the full frame, and the rear camera is the inset with keyboard labels readable left to right, so the rear camera is not mirrored.
 - No automated test. A Mac test of the compositor was considered and cut in a five-step pass: for swap it would cover one line (which frame is drawn first) and needed the drawing rewritten from UIKit to Core Graphics. Raise it again for drag, pinch and rotation, where the compositor gets real geometry.
+
+### 🤏 Drag and pinch result (2026-11-23)
+
+The inset is a pure value, `Inset`: a center and a size, both fractions of the photo. The preview and the saved photo ask it for a rectangle at their own sizes, so they agree.
+
+- Built test-first at that seam: six red-to-green cycles, eight checks against rectangles worked out by hand for a 1440x1920 photo.
+- First build on the phone: Max reported that the inset "doesn't move all the way to my finger" and looked bad while moving. Cause: the drag was measured in the inset's own coordinates, and the inset moves during the drag, so the distance was undercounted. Fix: `DragGesture(coordinateSpace: .global)`. The tests could not catch this; they cover what a drag distance does, not how it is measured.
+- Also turned off Core Animation's quarter-second easing of the camera layer, so the picture does not trail its frame during a pinch.
+- After the fix, Max: "Looks great!"
+- Claude compared a photo with the console: the log said center (0.708, 0.436), size 0.25, and the inset in the copied photo sits there.
+- The top margin changed from 3% of the photo's width to 3% of its height (43.2 to 57.6 pixels), so the geometry does not depend on the photo's shape.
 
 ## ✂️ Five-step pass (2026-11-13)
 

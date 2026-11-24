@@ -12,31 +12,57 @@ struct LunchCamApp: App {
     }
 }
 
-/// One camera in 3:4 with the other inset in the top-left corner: the rear camera is the
-/// full frame until a tap on the inset swaps them. The front camera is always mirrored.
+/// One camera in 3:4 with the other as a small inset: the rear camera is the full frame
+/// until a tap on the inset swaps them. A drag moves the inset and a pinch resizes it.
+/// The front camera is always mirrored.
 /// A shutter (on screen, or a volume button) saves the photo and opens the share sheet.
 struct CameraView: View {
     private let camera = Camera()
     @State private var shot: Shot?
     @State private var swapped = false
+    @State private var inset = Inset()
+    /// The inset as it was when the current drag or pinch began.
+    @State private var gestureStart: Inset?
 
     var body: some View {
         ZStack(alignment: .bottom) {
             Color.black.ignoresSafeArea()
             Preview(layer: swapped ? camera.frontPreview : camera.rearPreview)
                 .aspectRatio(3 / 4, contentMode: .fit)
-                .overlay(alignment: .topLeading) {
+                .overlay {
                     GeometryReader { photo in
-                        let width = photo.size.width
+                        let frame = inset.frame(in: photo.size)
                         Preview(layer: swapped ? camera.rearPreview : camera.frontPreview)
-                            .frame(width: width * Inset.size, height: photo.size.height * Inset.size)
-                            .clipShape(RoundedRectangle(cornerRadius: width * Inset.cornerRadius))
+                            .frame(width: frame.width, height: frame.height)
+                            .clipShape(RoundedRectangle(cornerRadius: photo.size.width * Inset.cornerRadius))
                             .onTapGesture {
                                 swapped.toggle()
                                 print("swapped: \(swapped)")
                             }
+                            // One gesture for both, so a drag and a pinch at the same time
+                            // start from the same inset instead of overwriting each other.
+                            // The drag is measured on the screen, not inside the inset: the inset
+                            // moves under the finger, so its own coordinates undercount the drag.
+                            .gesture(
+                                DragGesture(coordinateSpace: .global).simultaneously(with: MagnifyGesture())
+                                    .onChanged { value in
+                                        let start = gestureStart ?? inset
+                                        gestureStart = start
+                                        let drag = value.first?.translation ?? .zero
+                                        inset = start
+                                            .scaled(by: Double(value.second?.magnification ?? 1))
+                                            .moved(by: CGSize(
+                                                width: drag.width / photo.size.width,
+                                                height: drag.height / photo.size.height
+                                            ))
+                                    }
+                                    .onEnded { _ in
+                                        gestureStart = nil
+                                        print("inset: center \(inset.center), size \(inset.size)")
+                                    }
+                            )
                             .accessibilityLabel("Swap cameras")
-                            .padding(width * Inset.margin)
+                            .position(x: frame.midX, y: frame.midY)
                     }
                 }
                 .frame(maxHeight: .infinity)
@@ -60,7 +86,7 @@ struct CameraView: View {
     }
 
     private func shoot(via source: String) {
-        guard let image = camera.photo(swapped: swapped) else { return }
+        guard let image = camera.photo(swapped: swapped, inset: inset) else { return }
         // iOS asks for add-only Photos access the first time.
         PHPhotoLibrary.shared().performChanges {
             PHAssetChangeRequest.creationRequestForAsset(from: image)
@@ -116,7 +142,12 @@ struct Preview: UIViewRepresentable {
 
         override func layoutSubviews() {
             super.layoutSubviews()
+            // Without this, Core Animation eases the layer to its new size over a quarter second,
+            // so it trails behind the view during a pinch.
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
             hosted.frame = bounds
+            CATransaction.commit()
         }
     }
 }

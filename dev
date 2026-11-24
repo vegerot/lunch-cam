@@ -5,6 +5,7 @@
 #                            --console keeps showing the app's output; stopping it stops the app.
 #   dev photo [file]         Copy the last photo the app took to file (default: last.jpg).
 #                            The app keeps that debug copy; delete this command when the copy goes.
+#   dev test                 Run the inset geometry tests on this Mac. No phone needed.
 set -euo pipefail
 cd "$(dirname "$0")"
 DEVICE="00008160-0001393420434036" # "iPhone Duo Max"
@@ -13,10 +14,11 @@ APP="com.vegerot.lunchcam"
 case "${1:-}" in
 install)
   # A generic destination builds while the phone is locked; only the install needs the phone.
-  # The filter drops a line Xcode prints on every such build. It is not an error.
+  # The filter drops lines Xcode prints on every such build, which are not errors, and the
+  # compiler command line it repeats after a compile error, which is thousands of characters.
   xcodebuild -project LunchCam.xcodeproj -scheme LunchCam -configuration Debug \
     -destination generic/platform=iOS -derivedDataPath build -allowProvisioningUpdates -quiet build 2>&1 |
-    { grep --invert-match --extended-regexp 'IDESchemeActionsInvocationRecord|headermap' || true; }
+    { grep --invert-match --extended-regexp 'IDESchemeActionsInvocationRecord|headermap|swift-frontend' || true; }
   xcrun devicectl device install app --device "$DEVICE" \
     build/Build/Products/Debug-iphoneos/LunchCam.app
   exec xcrun devicectl device process launch --device "$DEVICE" \
@@ -28,8 +30,12 @@ photo)
     --domain-identifier "$APP" --source Documents/last.jpg --destination "$file" >/dev/null
   sips --getProperty pixelWidth --getProperty pixelHeight "$file"
   ;;
+test)
+  swiftc LunchCam/Inset.swift Tests/InsetTests.swift -o build/inset-tests
+  exec build/inset-tests
+  ;;
 *)
-  sed -n '3,7p' "$(basename "$0")" # the usage comment above; the `cd` put us next to the script
+  sed -n '3,8p' "$(basename "$0")" # the usage comment above; the `cd` put us next to the script
   exit 2
   ;;
 esac

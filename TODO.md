@@ -1,7 +1,6 @@
 ## Medium
 
 * Make rotation work
-* drag to move the selfie inset and pinch to resize it
 
 ## Low
 
