@@ -115,8 +115,13 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         // Force unwrap: the cameras deliver two-plane frames, brightness first (measured).
         CVPixelBufferLockBaseAddress(frame, .readOnly)
         let brightness = CVPixelBufferGetBaseAddressOfPlane(frame, 0)!.assumingMemoryBound(to: UInt8.self)
-        let count = CVPixelBufferGetBytesPerRowOfPlane(frame, 0) * CVPixelBufferGetHeightOfPlane(frame, 0)
-        let nowBlank = stride(from: 0, to: count, by: 997).allSatisfy { brightness[$0] == brightness[0] }
+        // A row can hold more bytes than the picture is wide; the spare ones are not black
+        // (measured: 1472 bytes for 1440 pixels), so only real pixels are sampled.
+        let rowBytes = CVPixelBufferGetBytesPerRowOfPlane(frame, 0)
+        let columns = stride(from: 0, to: CVPixelBufferGetWidthOfPlane(frame, 0), by: 41)
+        let nowBlank = stride(from: 0, to: CVPixelBufferGetHeightOfPlane(frame, 0), by: 37).allSatisfy { row in
+            columns.allSatisfy { brightness[row * rowBytes + $0] == brightness[0] }
+        }
         CVPixelBufferUnlockBaseAddress(frame, .readOnly)
         if nowBlank != blank {
             blank = nowBlank
