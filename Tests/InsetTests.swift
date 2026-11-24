@@ -50,6 +50,16 @@ enum InsetTests {
         // A camera outside the photo, up and to the right, gets the nearest corner.
         expect("or in the corner nearest a camera outside it", Inset(near: CGPoint(x: 1.1, y: -0.2)).frame(in: photo),
                CGRect(x: 1036.8, y: 57.6, width: 360, height: 480))
+        // A flick sends the inset to the corner nearest to where it was heading. Right of the
+        // middle and above it is the top-right corner: x = 1440 - 43.2 - 360, y = 57.6.
+        expect("a flick up and right lands in the top-right corner",
+               Inset(center: CGPoint(x: 0.6, y: 0.3)).inNearestCorner().frame(in: photo),
+               CGRect(x: 1036.8, y: 57.6, width: 360, height: 480))
+        // Left of the middle and below it, at 40% of the photo (576x768): x = 43.2,
+        // y = 1920 - 57.6 - 768.
+        expect("a flick down and left lands in the bottom-left corner, at its own size",
+               Inset(center: CGPoint(x: 0.4, y: 0.7), size: 0.4).inNearestCorner().frame(in: photo),
+               CGRect(x: 43.2, y: 1094.4, width: 576, height: 768))
         layoutTests()
         metadataTests()
         exit(failures == 0 ? 0 : 1)

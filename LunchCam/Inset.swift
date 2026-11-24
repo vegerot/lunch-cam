@@ -32,6 +32,13 @@ struct Inset {
         return inset.keptInside()
     }
 
+    /// The inset in the corner of the photo nearest to its center, one margin from both edges.
+    func inNearestCorner() -> Inset {
+        var inset = self
+        inset.center = CGPoint(x: center.x < 0.5 ? 0 : 1, y: center.y < 0.5 ? 0 : 1)
+        return inset.keptInside()
+    }
+
     /// The same inset, pushed back so that it stays one margin inside the photo.
     fileprivate func keptInside() -> Inset {
         var inset = self
