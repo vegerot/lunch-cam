@@ -31,6 +31,7 @@ photo)
   sips --getProperty pixelWidth --getProperty pixelHeight "$file"
   ;;
 test)
+  mkdir -p build # a fresh clone has no build folder yet
   swiftc LunchCam/Inset.swift LunchCam/Layout.swift LunchCam/Metadata.swift Tests/*.swift -o build/tests
   exec build/tests
   ;;
