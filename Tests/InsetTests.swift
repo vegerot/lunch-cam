@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-// Tests for `Inset`, run on the Mac with `./dev test`.
+// Tests for `Inset`, and the entry point for all tests, run on the Mac with `./dev test`.
 // Expected rectangles are worked out by hand for a 1440x1920 photo, the size the cameras deliver.
 
 let photo = CGSize(width: 1440, height: 1920)
@@ -42,6 +42,7 @@ enum InsetTests {
         // Grown in the top-left corner, it would poke out of the photo; it is pushed back in.
         expect("a pinch in a corner stays inside the photo", Inset().scaled(by: 2).frame(in: photo),
                CGRect(x: 43.2, y: 57.6, width: 720, height: 960))
+        layoutTests()
         exit(failures == 0 ? 0 : 1)
     }
 }

@@ -55,7 +55,7 @@ Every milestone and every experiment gets its own Sapling commit that touches on
 
 ## ✅ Testing
 
-- One automated test: `./dev test` checks the inset geometry (`LunchCam/Inset.swift`) on the Mac in about a second. Everything else is checked by hand on the phone.
+- One automated test run: `./dev test` checks the inset geometry (`LunchCam/Inset.swift`) and the screen layout (`LunchCam/Layout.swift`) on the Mac in about a second. Everything else is checked by hand on the phone.
 - **Claude watches the phone's screen** through QuickTime Player (File ▸ New Movie Recording, with the iPhone as the camera). It shows the camera and is view only, so Max does the taps.
 - **Claude checks** each layer through the app's console output: the app launches, the session runs, nothing crashes. iPhone Mirroring cannot show the camera: it replaces the app with the notice "iPhone camera is not available from Mac" (measured 2026-11-13). From layer 3 on, Claude copies the saved photo off the phone and looks at it.
 - **Max checks** on the physical phone, with iPhone Mirroring disconnected: the layer 2 preview, the layer 3 photo, and the layer 4 volume buttons. Claude also analyzes it and gives an opinion.
@@ -72,7 +72,7 @@ A Mac test harness for the compositor is not built: the phone loop is one comman
 - `./dev install` builds with `xcodebuild`, installs with `devicectl` (Apple's device command-line tool), and launches the app. Adding `--console` keeps showing the app's output; stopping it stops the app. This is also the weekly reinstall.
 - `./dev install --tint` starts the app in **tint mode**: a red layer with an F over the front camera's picture and a green layer with a B over the back camera's. Xcode's Device Hub gives apps black camera frames while it controls the phone (Apple documents this in "Interacting with your app in Device Hub"), so without the tint the two pictures are black on black. The tint is a launch argument: it lasts for that launch only, the app opened from the Home Screen is normal, and saved photos are not tinted. Seen in Device Hub on 2026-11-23, before and after a swap.
 - `./dev photo [file]` copies the last photo off the phone, for as long as the app keeps its debug copy.
-- `./dev test` runs the inset geometry tests on the Mac.
+- `./dev test` runs the inset and layout geometry tests on the Mac.
 
 Max never needs to open Xcode.
 
@@ -152,6 +152,15 @@ The inset is a pure value, `Inset`: a center and a size, both fractions of the p
 - After the fix, Max: "Looks great!"
 - Claude compared a photo with the console: the log said center (0.708, 0.436), size 0.25, and the inset in the copied photo sits there.
 - The top margin changed from 3% of the photo's width to 3% of its height (43.2 to 57.6 pixels), so the geometry does not depend on the photo's shape.
+
+## 📱 iPhone Duo layout result (2026-11-23)
+
+First step of "Optimize for iPhone Duo". Background and sources: `iphone-duo-notes.md`.
+
+- **Rule** (`LunchCam/Layout.swift`, pure, tested): the shutter gets a strip of its own, 96 points wide, below the picture or beside it, whichever leaves the larger 3:4 picture. The picture and the strip are centered together. The shutter never covers the picture; in a space with no spare room the picture shrinks instead.
+- **Orientation lock removed.** The project allowed portrait only. Apple says the inner display ignores that and scales such an app. All four orientations are now allowed, and the layout follows the space it is given.
+- **Seen in Device Hub with `--tint`** (layout only, cameras are black there): closed, the shutter sits below the picture; open, it sits to the right of the picture. Before, it covered the picture's bottom edge in both.
+- **Not done yet:** half-folded, the picture still crosses the fold (tabletop mode); the cameras' upright angle is still read once at startup, so real pictures may be sideways after a fold or a turn. Not checked with real cameras: Max has not held the phone since this change.
 
 ## ✂️ Five-step pass (2026-11-13)
 

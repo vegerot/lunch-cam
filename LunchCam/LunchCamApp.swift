@@ -25,55 +25,59 @@ struct CameraView: View {
     @State private var gestureStart: Inset?
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             Color.black.ignoresSafeArea()
-            preview(front: swapped)
-                .aspectRatio(3 / 4, contentMode: .fit)
-                .overlay {
-                    GeometryReader { photo in
-                        let frame = inset.frame(in: photo.size)
-                        preview(front: !swapped)
-                            .frame(width: frame.width, height: frame.height)
-                            .clipShape(RoundedRectangle(cornerRadius: photo.size.width * Inset.cornerRadius))
-                            .onTapGesture {
-                                swapped.toggle()
-                                print("swapped: \(swapped)")
-                            }
-                            // One gesture for both, so a drag and a pinch at the same time
-                            // start from the same inset instead of overwriting each other.
-                            // The drag is measured on the screen, not inside the inset: the inset
-                            // moves under the finger, so its own coordinates undercount the drag.
-                            .gesture(
-                                DragGesture(coordinateSpace: .global).simultaneously(with: MagnifyGesture())
-                                    .onChanged { value in
-                                        let start = gestureStart ?? inset
-                                        gestureStart = start
-                                        let drag = value.first?.translation ?? .zero
-                                        inset = start
-                                            .scaled(by: Double(value.second?.magnification ?? 1))
-                                            .moved(by: CGSize(
-                                                width: drag.width / photo.size.width,
-                                                height: drag.height / photo.size.height
-                                            ))
-                                    }
-                                    .onEnded { _ in
-                                        gestureStart = nil
-                                        print("inset: center \(inset.center), size \(inset.size)")
-                                    }
-                            )
-                            .accessibilityLabel("Swap cameras")
-                            .position(x: frame.midX, y: frame.midY)
+            // Laid out from the space the app is given, which changes when the phone folds or turns.
+            GeometryReader { space in
+                let layout = Layout(in: space.size)
+                preview(front: swapped)
+                    .overlay {
+                        GeometryReader { photo in
+                            let frame = inset.frame(in: photo.size)
+                            preview(front: !swapped)
+                                .frame(width: frame.width, height: frame.height)
+                                .clipShape(RoundedRectangle(cornerRadius: photo.size.width * Inset.cornerRadius))
+                                .onTapGesture {
+                                    swapped.toggle()
+                                    print("swapped: \(swapped)")
+                                }
+                                // One gesture for both, so a drag and a pinch at the same time
+                                // start from the same inset instead of overwriting each other.
+                                // The drag is measured on the screen, not inside the inset: the inset
+                                // moves under the finger, so its own coordinates undercount the drag.
+                                .gesture(
+                                    DragGesture(coordinateSpace: .global).simultaneously(with: MagnifyGesture())
+                                        .onChanged { value in
+                                            let start = gestureStart ?? inset
+                                            gestureStart = start
+                                            let drag = value.first?.translation ?? .zero
+                                            inset = start
+                                                .scaled(by: Double(value.second?.magnification ?? 1))
+                                                .moved(by: CGSize(
+                                                    width: drag.width / photo.size.width,
+                                                    height: drag.height / photo.size.height
+                                                ))
+                                        }
+                                        .onEnded { _ in
+                                            gestureStart = nil
+                                            print("inset: center \(inset.center), size \(inset.size)")
+                                        }
+                                )
+                                .accessibilityLabel("Swap cameras")
+                                .position(x: frame.midX, y: frame.midY)
+                        }
                     }
+                    .frame(width: layout.picture.width, height: layout.picture.height)
+                    .position(x: layout.picture.midX, y: layout.picture.midY)
+                Button(action: { shoot(via: "screen button") }) {
+                    Circle()
+                        .fill(.white)
+                        .overlay(Circle().stroke(.black.opacity(0.3), lineWidth: 2).padding(4))
                 }
-                .frame(maxHeight: .infinity)
-            Button(action: { shoot(via: "screen button") }) {
-                Circle()
-                    .fill(.white)
-                    .frame(width: 72, height: 72)
-                    .overlay(Circle().stroke(.black.opacity(0.3), lineWidth: 2).padding(4))
+                .accessibilityLabel("Shutter")
+                .frame(width: layout.shutter.width, height: layout.shutter.height)
+                .position(x: layout.shutter.midX, y: layout.shutter.midY)
             }
-            .accessibilityLabel("Shutter")
-            .padding(.bottom, 24)
         }
         .task { await camera.start() }
         // The volume buttons (and other hardware capture buttons) fire the shutter on release.
