@@ -18,16 +18,11 @@ struct Layout {
     init(in space: CGSize, landscape: Bool = false, fold: CGRect? = nil, lens: CGPoint = .zero) {
         let shape = landscape ? 4.0 / 3 : 3.0 / 4 // width over height
         let size = CGSize(width: Layout.shutterSize, height: Layout.shutterSize)
-        if let fold {
-            // The fold crosses the whole space one way; the two halves lie on either side of it.
-            let whole = CGRect(origin: .zero, size: space)
-            let across = fold.width >= space.width
-            let first = across
-                ? whole.divided(atDistance: fold.minY, from: .minYEdge).slice
-                : whole.divided(atDistance: fold.minX, from: .minXEdge).slice
-            let second = across
-                ? whole.divided(atDistance: fold.maxY, from: .minYEdge).remainder
-                : whole.divided(atDistance: fold.maxX, from: .minXEdge).remainder
+        // The fold crosses the whole space one way; the two halves lie on either side of it.
+        // It only counts when each half has room for the shutter. In split view the app has one
+        // half of the screen, and the fold lies on the edge of its space.
+        if let fold, case let (first, second) = Layout.halves(of: space, around: fold),
+           min(first.width, first.height, second.width, second.height) >= Layout.strip {
             let camerasFirst = first.contains(lens)
             let home = camerasFirst ? first : second
             let other = camerasFirst ? second : first
@@ -60,5 +55,16 @@ struct Layout {
                 size: size
             )
         }
+    }
+
+    /// The parts of `space` before and after `fold`.
+    private static func halves(of space: CGSize, around fold: CGRect) -> (CGRect, CGRect) {
+        let whole = CGRect(origin: .zero, size: space)
+        let across = fold.width >= space.width
+        return across
+            ? (whole.divided(atDistance: max(fold.minY, 0), from: .minYEdge).slice,
+               whole.divided(atDistance: max(fold.maxY, 0), from: .minYEdge).remainder)
+            : (whole.divided(atDistance: max(fold.minX, 0), from: .minXEdge).slice,
+               whole.divided(atDistance: max(fold.maxX, 0), from: .minXEdge).remainder)
     }
 }

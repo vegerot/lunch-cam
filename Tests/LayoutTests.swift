@@ -71,4 +71,16 @@ func layoutTests() {
            CGRect(x: 120, y: 520, width: 360, height: 480))
     expect("table, cameras below: the shutter is on the top half", turned.shutter,
            CGRect(x: 264, y: 204, width: 72, height: 72))
+
+    // Split view on a half-folded phone: the app has one half of the screen, and the fold lies on
+    // the edge of its space, with 10 points of space past it. That is no room for a shutter, so the
+    // fold is ignored and the space is laid out as usual. Strip below: (600 - 96) * 3/4 = 378 wide.
+    // Strip beside: 480 - 96 = 384 wide, 512 tall. Beside wins and fills the width, so x = 0;
+    // y = (600 - 512) / 2 = 44. The shutter's center is 48 right of the picture: (432, 300).
+    let split = Layout(in: CGSize(width: 480, height: 600),
+                       fold: CGRect(x: 470, y: 0, width: 40, height: 600), lens: CGPoint(x: 40, y: 300))
+    expect("split view: a fold on the edge is ignored", split.picture,
+           CGRect(x: 0, y: 44, width: 384, height: 512))
+    expect("split view: the shutter stays inside the space", split.shutter,
+           CGRect(x: 396, y: 264, width: 72, height: 72))
 }
