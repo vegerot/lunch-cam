@@ -75,6 +75,10 @@ A Mac test harness for the compositor is not built: the phone loop is one comman
 
 Max never needs to open Xcode.
 
+### 🧰 Apple's agent skills
+
+`lunch-cam/.agents/skills/` holds four skills that ship inside Xcode, copied unchanged from Xcode 27.2 (build 27B52) on 2026-11-23: `app-resizability`, `device-interaction`, `swiftui-specialist` and `swiftui-whats-new-27`. `.claude/skills/` links to them. Refresh them after an Xcode update with `xcrun agent skills export`, which writes all eleven of Xcode's skills to `./xcode-skills/`. The text is Apple's, so leave these folders out if this project ever becomes public.
+
 The script was 34 lines then (41 now, with three subcommands). Max waived the 20-line limit for it after a Swift version was tried: Swift needed 64 lines (53 of code) against 29 (17 of code) for the two original shell scripts together, because running commands is what shell does natively.
 
 ## 📱 Environment (measured 2026-11-13)
