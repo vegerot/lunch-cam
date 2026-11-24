@@ -127,10 +127,14 @@ struct Preview: UIViewRepresentable {
         // Adding a layer here also takes it out of the view that showed it before the swap.
         var hosted: CALayer {
             didSet {
+                guard hosted !== oldValue else { return }
                 layer.addSublayer(hosted)
+                swapping = true
                 setNeedsLayout()
             }
         }
+        /// True from a swap until the next layout, which then animates the layer to its new size.
+        private var swapping = false
 
         init(hosted: CALayer) {
             self.hosted = hosted
@@ -142,12 +146,13 @@ struct Preview: UIViewRepresentable {
 
         override func layoutSubviews() {
             super.layoutSubviews()
-            // Without this, Core Animation eases the layer to its new size over a quarter second,
-            // so it trails behind the view during a pinch.
+            // Core Animation eases a layer to a new size over a quarter second. That is the swap
+            // animation. During a pinch it is turned off, or the picture trails behind the view.
             CATransaction.begin()
-            CATransaction.setDisableActions(true)
+            CATransaction.setDisableActions(!swapping)
             hosted.frame = bounds
             CATransaction.commit()
+            swapping = false
         }
     }
 }

@@ -15,7 +15,7 @@ Status: agreed in a design interview on 2026-11-13, then cut down once with the 
 | Distribution | Installed on the phone from this Mac. No App Store, no TestFlight. |
 | Output | One image: rear photo full-frame with the selfie baked into the corner, exactly as the preview shows. |
 | Shape | Portrait only. The app does not rotate. The photo keeps the shape the camera format delivers, with no cropping: 3:4 if layer 1 finds a 4:3 format, otherwise 9:16. The inset has the same shape. |
-| Inset | Starts in the top-left corner at a quarter of the photo, with rounded corners. A tap on it swaps which camera is the inset. A drag moves it and a pinch resizes it, between 15% and half of the photo, always inside the photo (all added 2026-11-23). |
+| Inset | Starts in the top-left corner at a quarter of the photo, with rounded corners. A tap on it swaps which camera is the inset, and the two pictures ease into their new sizes over a quarter second (Max wants this animation kept). A drag moves it and a pinch resizes it, between 15% and half of the photo, always inside the photo (all added 2026-11-23). |
 | Selfie | Mirrored, as the preview shows it. |
 | Rear lens | Main wide lens only. |
 | Controls | One shutter button. The volume buttons also fire the shutter. |
