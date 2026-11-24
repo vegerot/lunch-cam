@@ -79,13 +79,13 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         guard let rear, let front else { return nil }
 
         let context = CIContext()
-        func image(_ buffer: CVPixelBuffer) -> UIImage {
-            let frame = CIImage(cvPixelBuffer: buffer)
+        func image(_ buffer: CVPixelBuffer, front: Bool) -> UIImage {
+            let frame = upright(buffer, front: front)
             // Force unwrap: rendering a camera frame only fails when memory runs out.
             return UIImage(cgImage: context.createCGImage(frame, from: frame.extent)!)
         }
-        let fullImage = image(swapped ? front : rear)
-        let insetImage = image(swapped ? rear : front)
+        let fullImage = image(swapped ? front : rear, front: swapped)
+        let insetImage = image(swapped ? rear : front, front: !swapped)
 
         let size = fullImage.size
         let insetFrame = inset.frame(in: size)
@@ -96,6 +96,18 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
             UIBezierPath(roundedRect: insetFrame, cornerRadius: size.width * Inset.cornerRadius).addClip()
             insetImage.draw(in: insetFrame)
         }
+    }
+
+    /// A saved frame turned upright, the same way its preview is turned.
+    private func upright(_ buffer: CVPixelBuffer, front: Bool) -> CIImage {
+        let asked = Int(connected[front ? 1 : 0].videoRotationAngleForHorizonLevelPreview)
+        // The selfie frames are mirrored, and in a mirror a turn runs the other way. Measured on
+        // the phone: the camera's own quarter turn equals `.right` for the rear camera and
+        // `.left` for the front camera.
+        let clockwise = front ? (360 - asked) % 360 : asked
+        // Force unwrap: the phone only asks for quarter turns (every angle seen was one).
+        let turn: CGImagePropertyOrientation = [0: .up, 90: .right, 180: .down, 270: .left][clockwise]!
+        return CIImage(cvPixelBuffer: buffer).oriented(turn)
     }
 
     func captureOutput(
@@ -166,19 +178,21 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
             connection.automaticallyAdjustsVideoMirroring = false
             connection.isVideoMirrored = position == .front
         }
+        // The saved frames stay at angle 0, as the sensor delivers them; `photo` turns them.
+        // Set explicitly: a new connection of the front camera starts at 180 (measured).
+        connections[1].videoRotationAngle = 0
 
         // Ask for the upright angle instead of assuming 90: on this phone the front sensor
         // is mounted differently from the rear one (a fixed 90 showed the selfie upside down).
         // The angle changes when the phone turns, and when it opens or closes, so keep asking.
-        // The saved frames use the preview's angle, so the photo is what the screen showed.
         let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: preview)
         func turn(to upright: CGFloat) {
             print("\(position == .front ? "front" : "rear") upright angle: \(upright)")
-            // The preview turns at once: it is only a transform. Turning the saved frames takes
-            // about 0.3 seconds per camera (measured), so that happens on the camera queue.
-            // On the main thread it froze the app for 0.6 seconds in the middle of every turn.
+            // Only the preview is turned here. The saved frames stay as the sensor delivers them
+            // and are turned in `photo`: turning them in the camera restarts the camera's
+            // exposure, which dimmed the selfie for a second after every turn (measured), and
+            // takes 0.3 seconds per camera.
             connections[0].videoRotationAngle = upright
-            queue.async { connections[1].videoRotationAngle = upright }
             // Both cameras turn together, so one of them reporting the shape is enough.
             // The sensors are wide: at 0 or 180 degrees the picture stays wide.
             if position == .back {
