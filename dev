@@ -3,9 +3,9 @@
 # Lunch Cam developer commands for the paired iPhone.
 #   dev install [--console]  Build, install and launch. Unlock the phone first.
 #                            --console keeps showing the app's output; stopping it stops the app.
-#   dev photo [file]         Copy the last photo the app took to file (default: last.jpg).
+#   dev photo [file]         Copy the last photo the app took to file (default: last.heic).
 #                            The app keeps that debug copy; delete this command when the copy goes.
-#   dev test                 Run the inset and layout geometry tests on this Mac. No phone needed.
+#   dev test                 Run the inset, layout and metadata tests on this Mac. No phone needed.
 set -euo pipefail
 cd "$(dirname "$0")"
 DEVICE="00008160-0001393420434036" # "iPhone Duo Max"
@@ -25,13 +25,13 @@ install)
     --terminate-existing ${2:+"$2"} "$APP"
   ;;
 photo)
-  file="${2:-last.jpg}"
+  file="${2:-last.heic}"
   xcrun devicectl device copy from --device "$DEVICE" --domain-type appDataContainer \
-    --domain-identifier "$APP" --source Documents/last.jpg --destination "$file" >/dev/null
+    --domain-identifier "$APP" --source Documents/last.heic --destination "$file" >/dev/null
   sips --getProperty pixelWidth --getProperty pixelHeight "$file"
   ;;
 test)
-  swiftc LunchCam/Inset.swift LunchCam/Layout.swift Tests/*.swift -o build/tests
+  swiftc LunchCam/Inset.swift LunchCam/Layout.swift LunchCam/Metadata.swift Tests/*.swift -o build/tests
   exec build/tests
   ;;
 *)

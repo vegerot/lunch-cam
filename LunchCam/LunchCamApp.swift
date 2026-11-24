@@ -1,5 +1,6 @@
 import AVFoundation
 import AVKit
+import CoreLocation
 import Photos
 import SwiftUI
 
@@ -18,6 +19,8 @@ struct LunchCamApp: App {
 /// A shutter (on screen, or a volume button) saves the photo and opens the share sheet.
 struct CameraView: View {
     private let camera = Camera()
+    /// Follows where the phone is, for the photo's details. Nothing is stored if Max says no.
+    private let whereabouts = CLLocationManager()
     @State private var shot: Shot?
     @State private var swapped = false
     @State private var inset = Inset()
@@ -127,6 +130,8 @@ struct CameraView: View {
             // Eased, so the picture changes shape along with the screen's own rotation.
             camera.onTurn = { turned in withAnimation(.easeInOut(duration: 0.3)) { landscape = turned } }
             camera.onBlank = { blank = $0 }
+            whereabouts.requestWhenInUseAuthorization()
+            whereabouts.startUpdatingLocation()
             await camera.start()
         }
         // The volume buttons (and other hardware capture buttons) fire the shutter on release.
@@ -134,7 +139,7 @@ struct CameraView: View {
             if event.phase == .ended { shoot(via: "hardware button") }
         }
         .sheet(item: $shot) { shot in
-            ShareSheet(image: shot.image).onAppear { print("share sheet shown") }
+            ShareSheet(file: shot.file).onAppear { print("share sheet shown") }
         }
     }
 
@@ -164,31 +169,35 @@ struct CameraView: View {
     }
 
     private func shoot(via source: String) {
-        guard let image = camera.photo(swapped: swapped, inset: inset) else { return }
+        let place = whereabouts.location.map {
+            Metadata.place(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude, altitude: $0.altitude)
+        }
+        guard let photo = camera.photo(swapped: swapped, inset: inset, place: place) else { return }
         // iOS asks for add-only Photos access the first time.
         PHPhotoLibrary.shared().performChanges {
-            PHAssetChangeRequest.creationRequestForAsset(from: image)
+            PHAssetCreationRequest.forAsset().addResource(with: .photo, data: photo.file, options: nil)
         } completionHandler: { saved, error in
             print("saved to Photos: \(saved) \(error?.localizedDescription ?? "")")
         }
-        // A copy the Mac can fetch over the cable to look at the result.
-        let copy = URL.documentsDirectory.appending(path: "last.jpg")
-        try? image.jpegData(compressionQuality: 0.9)?.write(to: copy)
-        print("shot via \(source), swapped \(swapped): \(Int(image.size.width))x\(Int(image.size.height))")
-        shot = Shot(image: image)
+        // The same file is shared, and the Mac can fetch it over the cable to look at the result.
+        let file = URL.documentsDirectory.appending(path: "last.heic")
+        try! photo.file.write(to: file) // the app can always write to its own folder
+        print("shot via \(source), swapped \(swapped): \(Int(photo.image.size.width))x\(Int(photo.image.size.height)), "
+            + "\(photo.file.count / 1000) kB, place known: \(place != nil)")
+        shot = Shot(file: file)
     }
 }
 
 struct Shot: Identifiable {
     let id = UUID()
-    let image: UIImage
+    let file: URL
 }
 
 struct ShareSheet: UIViewControllerRepresentable {
-    let image: UIImage
+    let file: URL
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: [image], applicationActivities: nil)
+        UIActivityViewController(activityItems: [file], applicationActivities: nil)
     }
 
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}

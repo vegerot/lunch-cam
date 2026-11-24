@@ -134,6 +134,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Lunch Cam";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Lunch Cam stores where each photo was taken inside the photo.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Lunch Cam takes a photo with the rear and front cameras at the same time.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Lunch Cam saves the photos you take to your library.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

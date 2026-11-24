@@ -51,6 +51,7 @@ enum InsetTests {
         expect("or in the corner nearest a camera outside it", Inset(near: CGPoint(x: 1.1, y: -0.2)).frame(in: photo),
                CGRect(x: 1036.8, y: 57.6, width: 360, height: 480))
         layoutTests()
+        metadataTests()
         exit(failures == 0 ? 0 : 1)
     }
 }

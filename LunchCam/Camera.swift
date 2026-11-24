@@ -1,5 +1,6 @@
 import AVFoundation
 import UIKit
+import UniformTypeIdentifiers
 
 /// Runs the rear wide camera and the front camera together.
 /// Each camera feeds a preview layer, and a data output that keeps its latest frame for the shutter.
@@ -12,8 +13,8 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     private let rearFrames = AVCaptureVideoDataOutput()
     private let frontFrames = AVCaptureVideoDataOutput()
     // Only touched on `queue`.
-    private var latestRear: CVPixelBuffer?
-    private var latestFront: CVPixelBuffer?
+    private var latestRear: CMSampleBuffer?
+    private var latestFront: CMSampleBuffer?
 
     /// Called on the main queue when the cameras stop or start delivering real pictures.
     /// They deliver blank ones while Xcode's Device Hub controls the phone.
@@ -72,15 +73,17 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     /// `tilt` must not wait for `queue`: connecting a preview waits for the main thread in turn.
     private var connected: [AVCaptureDevice.RotationCoordinator] = []
 
-    /// The two latest frames as one image: one camera full-frame, the other at `inset`.
-    /// The rear camera is the full frame unless `swapped`.
-    func photo(swapped: Bool, inset: Inset) -> UIImage? {
+    /// The two latest frames as one HEIC file: one camera full-frame, the other at `inset`.
+    /// The rear camera is the full frame unless `swapped`. The file carries the full-frame
+    /// camera's own details (time, exposure, lens) and `place`, if given.
+    func photo(swapped: Bool, inset: Inset, place: [String: Any]?) -> (image: UIImage, file: Data)? {
         let (rear, front) = queue.sync { (latestRear, latestFront) }
         guard let rear, let front else { return nil }
 
         let context = CIContext()
-        func image(_ buffer: CVPixelBuffer, front: Bool) -> UIImage {
-            let frame = upright(buffer, front: front)
+        func image(_ sample: CMSampleBuffer, front: Bool) -> UIImage {
+            // Force unwrap: a camera frame always holds a picture.
+            let frame = upright(CMSampleBufferGetImageBuffer(sample)!, front: front)
             // Force unwrap: rendering a camera frame only fails when memory runs out.
             return UIImage(cgImage: context.createCGImage(frame, from: frame.extent)!)
         }
@@ -91,11 +94,24 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         let insetFrame = inset.frame(in: size)
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1 // one image pixel per camera pixel
-        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+        let image = UIGraphicsImageRenderer(size: size, format: format).image { _ in
             fullImage.draw(at: .zero)
             UIBezierPath(roundedRect: insetFrame, cornerRadius: size.width * Inset.cornerRadius).addClip()
             insetImage.draw(in: insetFrame)
         }
+
+        // Every frame carries the camera's record of how it was taken (measured on the phone).
+        let exif = CMGetAttachment(swapped ? front : rear, key: kCGImagePropertyExifDictionary, attachmentModeOut: nil)
+        var properties = Metadata.properties(
+            exif: exif as? [String: Any] ?? [:], width: Int(size.width), height: Int(size.height), place: place
+        )
+        properties[kCGImageDestinationLossyCompressionQuality as String] = 0.9
+        // Force unwraps: the phone can write HEIC, and the image was drawn just above.
+        let file = NSMutableData()
+        let destination = CGImageDestinationCreateWithData(file, UTType.heic.identifier as CFString, 1, nil)!
+        CGImageDestinationAddImage(destination, image.cgImage!, properties as CFDictionary)
+        CGImageDestinationFinalize(destination)
+        return (image, file as Data)
     }
 
     /// A saved frame turned upright, the same way its preview is turned.
@@ -116,7 +132,7 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         from connection: AVCaptureConnection
     ) {
         let frame = CMSampleBufferGetImageBuffer(sampleBuffer)
-        if output === rearFrames { latestRear = frame } else { latestFront = frame }
+        if output === rearFrames { latestRear = sampleBuffer } else { latestFront = sampleBuffer }
 
         // Once a second, look whether the rear camera is delivering a real picture.
         guard output === rearFrames, let frame else { return }

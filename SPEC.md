@@ -55,7 +55,7 @@ Every milestone and every experiment gets its own Sapling commit that touches on
 
 ## ✅ Testing
 
-- One automated test run: `./dev test` checks the inset geometry (`LunchCam/Inset.swift`) and the screen layout (`LunchCam/Layout.swift`) on the Mac in about a second. Everything else is checked by hand on the phone.
+- One automated test run: `./dev test` checks the inset geometry (`LunchCam/Inset.swift`), the screen layout (`LunchCam/Layout.swift`) and the photo details (`LunchCam/Metadata.swift`) on the Mac in about a second. Everything else is checked by hand on the phone.
 - **Claude watches the phone's screen** through QuickTime Player (File ▸ New Movie Recording, with the iPhone as the camera). It shows the camera and is view only, so Max does the taps.
 - **Claude checks** each layer through the app's console output: the app launches, the session runs, nothing crashes. iPhone Mirroring cannot show the camera: it replaces the app with the notice "iPhone camera is not available from Mac" (measured 2026-11-13). From layer 3 on, Claude copies the saved photo off the phone and looks at it.
 - **Max checks** on the physical phone, with iPhone Mirroring disconnected: the layer 2 preview, the layer 3 photo, and the layer 4 volume buttons. Claude also analyzes it and gives an opinion.
@@ -72,7 +72,7 @@ A Mac test harness for the compositor is not built: the phone loop is one comman
 - `./dev install` builds with `xcodebuild`, installs with `devicectl` (Apple's device command-line tool), and launches the app. Adding `--console` keeps showing the app's output; stopping it stops the app. This is also the weekly reinstall.
 - **The tint.** Xcode's Device Hub gives apps blank camera frames while it controls the phone (Apple documents this in "Interacting with your app in Device Hub"), so the two pictures would be black on black. The app notices blank frames by itself and then draws a red layer with an F over the front camera's picture and a green layer with a B over the back camera's. A letter lying on its side means that camera's picture is not upright. Saved photos are not tinted. How it notices: once a second it samples the rear camera's frame; under Device Hub every sample has the same brightness (measured: 16, pure black), which a real sensor never delivers because of noise. Only real pixels are sampled: a row can hold spare bytes after the picture (measured: 1472 bytes for 1440 pixels) and those are not black; sampling them made the tint vanish whenever the picture was tall. Until 2026-11-23 evening this was a launch option, `--tint`.
 - `./dev photo [file]` copies the last photo off the phone, for as long as the app keeps its debug copy.
-- `./dev test` runs the inset and layout geometry tests on the Mac.
+- `./dev test` runs the inset, layout and metadata tests on the Mac.
 
 Max never needs to open Xcode.
 
@@ -205,6 +205,17 @@ An experiment for two TODO items: the camera cutout over the picture, and the se
 - **Seen in Device Hub with the tint, in all four half-folded orientations:** book with the cameras left and right, table with the cameras on the top half and on the bottom half. Each time the picture was on the half with the camera and the shutter on the other. On the table with the cameras on the bottom half, the picture is on the half that lies flat; that follows from Max's rule. Not checked with real pictures or by Max's hand.
 - **Split view while half-folded** (Max's case, 2026-11-23): the app has one half of the screen, and the fold's band lies on the edge of its space (the app's own readout: fold at x 455.5 to 495.5, in a space that ends inside that band). The first build treated that as a fold and centered the shutter in the empty sliver past it, so the shutter was cut in half at the fold; seen in a Device Hub screenshot. Fix, tested: a fold only counts when each side of it has room for the shutter's strip (96 points). Otherwise the space is laid out as usual. Seen fixed in Device Hub after Max started split view again (book pose, the app on the right half): the shutter is whole, below the picture, and the inset is on the camera. The app's readout there: fold at x 0 to 13.5 of its own space, so the picture's first 13.5 points lie under the fold's band; left as it is.
 - **Not used:** the fold's 20-point margins. The picture runs up to the 40-point band itself. Device Hub's rotate button did nothing on the first press in one pose; the second press worked.
+
+## 🏷️ HEIC and metadata result (2026-11-23)
+
+- **One HEIC file per photo**, written with ImageIO at quality 0.9. The same bytes go to Photos (`PHAssetCreationRequest.addResource`), to the share sheet (as the file `Documents/last.heic`) and to `./dev photo`. Before, Photos got a `UIImage`, which it encodes itself and which carries no details.
+- **Camera details are copied, not made up.** The app does not take screenshots of the previews. Each camera also feeds a data output that hands the app the sensor's own frames, and every frame carries the camera's record of how it was taken. Measured by printing one frame's attachments: time with time zone and milliseconds, exposure time, ISO, aperture, focal length, lens name. The app keeps the latest frame of each camera and copies the record of the full-frame camera's frame; only the picture size is corrected, because the camera wrote the size before the frame was turned upright.
+- **Limits of that record:** it describes one camera. The inset camera's exposure and lens are not stored. The frames come from the video pipeline, so the details are true, but the picture is a 2.8-megapixel video frame without the still-photo processing.
+- **Make, model, software:** "Apple", the phone's name cut from the start of the lens name ("iPhone Duo back camera 5.96mm f/1.6" gives "iPhone Duo"), and "Lunch Cam".
+- **Place:** latitude, longitude and altitude from Core Location, if Max allows it. The app asks once ("while using the app") and reads the latest known location when the shutter is pressed. Without permission the photo is saved without a place.
+- **Tested on the Mac** (`LunchCam/Metadata.swift`): hemisphere letters, below sea level, the phone's name.
+- **Checked on a real photo.** Max pressed the shutter; Claude copied the file off the phone and read it back with ImageIO: HEIC, 1440x1920, 58 kB (the rear camera was covered, so the picture was nearly black), date 2026:11:23 23:38:45 -08:00, exposure 1/61 s, ISO 4000, f/1.6, lens "iPhone Duo back camera 5.96mm f/1.6", make Apple, model iPhone Duo, software Lunch Cam, place present. The picture looked right: black full frame, selfie inset in the top right corner.
+- **Not checked:** how the Photos app shows these details, a swapped photo (the record should then name the front camera), and the file size of a normal bright photo.
 
 ## ✂️ Five-step pass (2026-11-13)
 
