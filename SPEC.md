@@ -23,7 +23,7 @@ Status: agreed in a design interview on 2026-11-13, then cut down once with the 
 | Permissions | Camera, and add-only Photos access (the app can save, not read). |
 | Name | "Lunch Cam", bundle ID `com.vegerot.lunchcam`. |
 | Icon | A bowl of ramen inside a camera lens, on orange. Made by `gpt-image-2.6-sunburst` on 2026-11-23 from prompt `b-lens` in `icon-candidates/prompts.json`; Max chose it from seven candidates. |
-| Location | `lunch-cam/` in the `ai-conversations` repository. It moves to its own repository later. |
+| Location | Its own repository, `lunch-cam`, since 2026-11-24. Until then it was the folder `lunch-cam/` in the `ai-conversations` repository; the history came along, and the conversation notes stayed there. |
 | Signing | Max's Personal Team, `GWKJRP4KM9`. It is a free team, so the app expires after 7 days and needs a reinstall. |
 
 ### 📷 Capture pipeline
@@ -46,7 +46,7 @@ Version 1 builds nothing in advance for these.
 ## 🧱 Layers
 
 Each layer is installed on the phone and checked by hand before the next layer starts.
-Every milestone and every experiment gets its own Sapling commit that touches only `lunch-cam/`. Nothing is pushed unless Max asks.
+Every milestone and every experiment gets its own commit. Nothing is pushed unless Max asks.
 
 1. 🧪 **Probe.** An app that installs, launches, and shows whether multi-camera capture is supported, plus the formats each camera offers in a multi-camera session.
 2. 📷 **Preview.** The multi-camera session runs. The rear camera fills the screen and the mirrored front camera sits in the top-left corner.
@@ -67,7 +67,7 @@ A Mac test harness for the compositor is not built: the phone loop is one comman
 
 ## 🛠️ Build and install
 
-`lunch-cam/dev` is one shell script with three subcommands:
+`dev` is one shell script with three subcommands:
 
 - `./dev install` builds with `xcodebuild`, installs with `devicectl` (Apple's device command-line tool), and launches the app. Adding `--console` keeps showing the app's output; stopping it stops the app. This is also the weekly reinstall.
 - **The tint.** Xcode's Device Hub gives apps blank camera frames while it controls the phone (Apple documents this in "Interacting with your app in Device Hub"), so the two pictures would be black on black. The app notices blank frames by itself and then draws a red layer with an F over the front camera's picture and a green layer with a B over the back camera's. A letter lying on its side means that camera's picture is not upright. Saved photos are not tinted. How it notices: once a second it samples the rear camera's frame; under Device Hub every sample has the same brightness (measured: 16, pure black), which a real sensor never delivers because of noise. Only real pixels are sampled: a row can hold spare bytes after the picture (measured: 1472 bytes for 1440 pixels) and those are not black; sampling them made the tint vanish whenever the picture was tall. Until 2026-11-23 evening this was a launch option, `--tint`.
@@ -78,7 +78,7 @@ Max never needs to open Xcode.
 
 ### 🧰 Apple's agent skills
 
-`lunch-cam/.agents/skills/` holds four skills that ship inside Xcode, copied unchanged from Xcode 27.2 (build 27B52) on 2026-11-23: `app-resizability`, `device-interaction`, `swiftui-specialist` and `swiftui-whats-new-27`. `.claude/skills/` links to them. Refresh them after an Xcode update with `xcrun agent skills export`, which writes all eleven of Xcode's skills to `./xcode-skills/`. The text is Apple's, so leave these folders out if this project ever becomes public.
+`.agents/skills/` holds four skills that ship inside Xcode, copied unchanged from Xcode 27.2 (build 27B52) on 2026-11-23: `app-resizability`, `device-interaction`, `swiftui-specialist` and `swiftui-whats-new-27`. `.claude/skills/` links to them. Refresh them after an Xcode update with `xcrun agent skills export`, which writes all eleven of Xcode's skills to `./xcode-skills/`. The text is Apple's, so leave these folders out if this project ever becomes public.
 
 The script was 34 lines then (41 now, with three subcommands). Max waived the 20-line limit for it after a Swift version was tried: Swift needed 64 lines (53 of code) against 29 (17 of code) for the two original shell scripts together, because running commands is what shell does natively.
 
