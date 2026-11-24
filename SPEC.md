@@ -179,6 +179,26 @@ This is TODO's "Make rotation work". Max reported after the layout change that t
 - **A deadlock, found and fixed on the way:** the main thread must not wait for the camera queue, because connecting a preview layer on the camera queue waits for the main thread. iOS killed the app at launch (signal 9).
 - **Not applicable:** Apple's advice to turn off sensor-orientation compensation is a setting of `AVCapturePhotoOutput`, which the app does not use.
 
+## 📍 Where the cameras and the fold are (measured 2026-11-23)
+
+An experiment for two TODO items: the camera cutout over the picture, and the selfie under the camera. No app code changed.
+
+- **How:** a temporary `GeometryReader` that ignores the safe area printed `reservedRegions(kind: .occlusion)` and `reservedRegions(kind: .division)` in each pose, set with Device Hub. The method needs iOS 27.1; the project's minimum is lower, so it needs an `if #available`. A region has `frame`, `margins`, `isActive` and `kind`. All numbers are points in the full screen, origin top left.
+- **Every pose reports two occlusions:** the front camera, and the status strip (84 by 124 to 196, or 144 by 82, in a top corner). The status strip is already outside the safe area. The camera is not.
+- **The inner camera is inside the safe area**, about 22 points from one edge, so the picture can run under it. It was `isActive: true` in every pose, as expected: the app always uses the front camera.
+
+| Pose | Screen | Camera frame (x, y, width, height) | Picture today (full-screen x or y range) | Camera on the picture? |
+| --- | --- | --- | --- | --- |
+| Closed | 466 x 678 | 400, 29, 37, 37 | x 0 to 382 | No: it is in the status strip |
+| Open, wide screen | 951 x 669 | 659, 22, 62, 40 | x 147 to 624 | No: 35 points to the right of it |
+| Open, tall screen | 669 x 951 | 607, 659, 40, 62 | full width, y 201 to 702 | Yes: bottom right corner |
+| Open, wide screen, upside down | 951 x 669 | 230, 607, 62, 40 | x 147 to 624, full height | Yes: bottom edge |
+| Open, tall screen, upside down | 669 x 951 | 22, 230, 40, 62 | full width, y 201 to 702 | Yes: top left, under the selfie inset |
+
+- **In the three covered poses the picture can slide clear without shrinking** (worked out from the numbers, not built): on the tall screen the picture and shutter strip need 598 of 835 points, so they fit entirely above or below the camera; on the upside-down wide screen they need 572 points and 575 are free to the right of the camera.
+- **The fold:** only the half-folded pose reports a division: `frame` 455.5, 0, 40, 669 on the wide screen, with 20-point margins on each side. Fully open and closed report none. Today the picture (x 147 to 624) crosses it.
+- **Not measured:** half-folded on the tall screen (tabletop). Device Hub's rotate button did nothing on the first press in one pose; the second press worked.
+
 ## ✂️ Five-step pass (2026-11-13)
 
 One pass of the five-step engineering algorithm: question each requirement, delete, simplify, speed up the loop, automate last.
