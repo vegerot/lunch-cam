@@ -155,9 +155,9 @@ The inset is a pure value, `Inset`: a center and a size, both fractions of the p
 
 ### 🏒 Flick result (2026-11-23)
 
-- **A flick sends the inset to a corner** (`Inset.inNearestCorner()`, tested). On release, SwiftUI's drag gives `predictedEndTranslation`: the finger's travel plus a projection of its speed. A release that would glide on for more than 50 points counts as a flick, and the inset springs to the corner nearest that resting place (0.4 seconds, slight bounce). A slower release leaves the inset exactly where it was dropped.
-- **A prototype came first**, on Max's request: the inset glided to the predicted resting place and stopped there or at the photo's edge. It is kept in history as a WIP commit. Max chose the corner snap.
-- **Seen in the console while Max flicked:** glides of 295 to 908 points, each ending at center (0.155, 0.155) or (0.845, 0.845), which are corners. How it feels is Max's call; the 50 points, the 0.4 seconds and the bounce are first guesses.
+- **Tried second, then dropped: a flick sends the inset to a corner.** On release, SwiftUI's drag gives `predictedEndTranslation`: the finger's travel plus a projection of its speed. A release that would glide on for more than 50 points counts as a flick, and the inset springs to the corner nearest that resting place (0.4 seconds, slight bounce). A slower release leaves the inset exactly where it was dropped.
+- **Final: a flicked inset keeps gliding.** This was the prototype built first, on Max's request: the inset eases to the predicted resting place over half a second and stops there, or at the photo's edge (the same `Inset.moved(by:)` clamp as a drag, which is tested). Max tried both and liked the glide better. Both versions are in history as their own commits; the corner rule and its two tests were removed.
+- **Seen in the console while Max flicked the corner version:** glides of 295 to 908 points, each ending at center (0.155, 0.155) or (0.845, 0.845), which are corners. How it feels is Max's call; the 50 points, the 0.4 seconds and the bounce are first guesses.
 
 ## 📱 iPhone Duo layout result (2026-11-23)
 

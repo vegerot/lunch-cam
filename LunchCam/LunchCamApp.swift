@@ -94,27 +94,20 @@ struct CameraView: View {
                                                 ))
                                         }
                                         .onEnded { value in
-                                            // A flick sends the inset to a corner. The system predicts
-                                            // where the drag would come to rest from the finger's speed at
-                                            // release; a flick is a release that would glide on for more
-                                            // than 50 points, and the corner is the one nearest that
-                                            // resting place. A slow drag leaves the inset where it is.
+                                            // A flick keeps gliding. The system predicts where the drag
+                                            // would come to rest from the finger's speed at release; the
+                                            // inset eases there, and stops at the photo's edge. A slow
+                                            // release has no speed, so the inset stays where it was dropped.
                                             let start = gestureStart ?? inset
-                                            let drag = value.first?.translation ?? .zero
-                                            let rest = value.first?.predictedEndTranslation ?? drag
-                                            let glide = hypot(rest.width - drag.width, rest.height - drag.height)
-                                            if glide > 50 {
-                                                withAnimation(.spring(duration: 0.4, bounce: 0.15)) {
-                                                    inset = start
-                                                        .scaled(by: Double(value.second?.magnification ?? 1))
-                                                        .moved(by: CGSize(
-                                                            width: rest.width / photo.size.width,
-                                                            height: rest.height / photo.size.height
-                                                        ))
-                                                        .inNearestCorner()
-                                                }
+                                            let rest = value.first?.predictedEndTranslation ?? .zero
+                                            withAnimation(.spring(duration: 0.5, bounce: 0)) {
+                                                inset = start
+                                                    .scaled(by: Double(value.second?.magnification ?? 1))
+                                                    .moved(by: CGSize(
+                                                        width: rest.width / photo.size.width,
+                                                        height: rest.height / photo.size.height
+                                                    ))
                                             }
-                                            print("released with a glide of \(Int(glide)) points")
                                             gestureStart = nil
                                             placed = true
                                             print("inset: center \(inset.center), size \(inset.size)")
