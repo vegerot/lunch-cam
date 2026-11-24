@@ -15,7 +15,7 @@ Status: agreed in a design interview on 2026-11-13, then cut down once with the 
 | Distribution | Installed on the phone from this Mac. No App Store, no TestFlight. |
 | Output | One image: rear photo full-frame with the selfie baked into the corner, exactly as the preview shows. |
 | Shape | Portrait only. The app does not rotate. The photo keeps the shape the camera format delivers, with no cropping: 3:4 if layer 1 finds a 4:3 format, otherwise 9:16. The inset has the same shape. |
-| Inset | Top-left corner, about a quarter of the photo width, rounded corners, fixed in place. |
+| Inset | Top-left corner, about a quarter of the photo width, rounded corners, fixed in place. A tap on the inset swaps which camera is the inset (added 2026-11-23). |
 | Selfie | Mirrored, as the preview shows it. |
 | Rear lens | Main wide lens only. |
 | Controls | One shutter button. The volume buttons also fire the shutter. |
@@ -39,7 +39,6 @@ The cost is resolution, which is roughly video quality. Layer 1 measures the rea
 Version 1 builds nothing in advance for these.
 
 - 🎥 Video and Live Photos.
-- 🔄 Swap which camera is the inset.
 - 🤏 Drag the inset and pinch to resize it.
 - 🏷️ Photo metadata, such as location.
 - 🔦 Flash, timer, zoom, lens switching, settings screen, in-app gallery.
@@ -127,6 +126,15 @@ saved to Photos: true
 ```
 
 The save uses the Photos framework's change request, because its completion reports success or failure.
+
+### 🔄 Swap result (2026-11-23)
+
+A tap on the inset swaps the two cameras in the preview and in the saved photo. One `swapped` flag feeds both, so they cannot disagree.
+
+- Max checked the preview on the phone: "looks good".
+- Console: `shot via screen button, swapped true: 1440x1920`, then `saved to Photos: true`.
+- Claude looked at the photo copied off the phone: the selfie is the full frame, and the rear camera is the inset with keyboard labels readable left to right, so the rear camera is not mirrored.
+- No automated test. A Mac test of the compositor was considered and cut in a five-step pass: for swap it would cover one line (which frame is drawn first) and needed the drawing rewritten from UIKit to Core Graphics. Raise it again for drag, pinch and rotation, where the compositor gets real geometry.
 
 ## ✂️ Five-step pass (2026-11-13)
 

@@ -12,23 +12,30 @@ struct LunchCamApp: App {
     }
 }
 
-/// The rear camera in 3:4 with the mirrored front camera inset in the top-left corner,
-/// and a shutter (on screen, or a volume button) that saves the photo and opens the share sheet.
+/// One camera in 3:4 with the other inset in the top-left corner: the rear camera is the
+/// full frame until a tap on the inset swaps them. The front camera is always mirrored.
+/// A shutter (on screen, or a volume button) saves the photo and opens the share sheet.
 struct CameraView: View {
     private let camera = Camera()
     @State private var shot: Shot?
+    @State private var swapped = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
             Color.black.ignoresSafeArea()
-            Preview(layer: camera.rearPreview)
+            Preview(layer: swapped ? camera.frontPreview : camera.rearPreview)
                 .aspectRatio(3 / 4, contentMode: .fit)
                 .overlay(alignment: .topLeading) {
                     GeometryReader { photo in
                         let width = photo.size.width
-                        Preview(layer: camera.frontPreview)
+                        Preview(layer: swapped ? camera.rearPreview : camera.frontPreview)
                             .frame(width: width * Inset.size, height: photo.size.height * Inset.size)
                             .clipShape(RoundedRectangle(cornerRadius: width * Inset.cornerRadius))
+                            .onTapGesture {
+                                swapped.toggle()
+                                print("swapped: \(swapped)")
+                            }
+                            .accessibilityLabel("Swap cameras")
                             .padding(width * Inset.margin)
                     }
                 }
@@ -53,7 +60,7 @@ struct CameraView: View {
     }
 
     private func shoot(via source: String) {
-        guard let image = camera.photo() else { return }
+        guard let image = camera.photo(swapped: swapped) else { return }
         // iOS asks for add-only Photos access the first time.
         PHPhotoLibrary.shared().performChanges {
             PHAssetChangeRequest.creationRequestForAsset(from: image)
@@ -63,7 +70,7 @@ struct CameraView: View {
         // A copy the Mac can fetch over the cable to look at the result.
         let copy = URL.documentsDirectory.appending(path: "last.jpg")
         try? image.jpegData(compressionQuality: 0.9)?.write(to: copy)
-        print("shot via \(source): \(Int(image.size.width))x\(Int(image.size.height))")
+        print("shot via \(source), swapped \(swapped): \(Int(image.size.width))x\(Int(image.size.height))")
         shot = Shot(image: image)
     }
 }
@@ -88,10 +95,16 @@ struct Preview: UIViewRepresentable {
     let layer: AVCaptureVideoPreviewLayer
 
     func makeUIView(context: Context) -> LayerHost { LayerHost(hosted: layer) }
-    func updateUIView(_ view: LayerHost, context: Context) {}
+    func updateUIView(_ view: LayerHost, context: Context) { view.hosted = layer }
 
     final class LayerHost: UIView {
-        private let hosted: CALayer
+        // Adding a layer here also takes it out of the view that showed it before the swap.
+        var hosted: CALayer {
+            didSet {
+                layer.addSublayer(hosted)
+                setNeedsLayout()
+            }
+        }
 
         init(hosted: CALayer) {
             self.hosted = hosted

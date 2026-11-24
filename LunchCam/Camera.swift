@@ -52,8 +52,9 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         }
     }
 
-    /// The two latest frames as one image: rear full-frame, selfie inset top-left.
-    func photo() -> UIImage? {
+    /// The two latest frames as one image: one camera full-frame, the other inset top-left.
+    /// The rear camera is the full frame unless `swapped`.
+    func photo(swapped: Bool) -> UIImage? {
         let (rear, front) = queue.sync { (latestRear, latestFront) }
         guard let rear, let front else { return nil }
 
@@ -63,10 +64,10 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
             // Force unwrap: rendering a camera frame only fails when memory runs out.
             return UIImage(cgImage: context.createCGImage(frame, from: frame.extent)!)
         }
-        let rearImage = image(rear)
-        let frontImage = image(front)
+        let fullImage = image(swapped ? front : rear)
+        let insetImage = image(swapped ? rear : front)
 
-        let size = rearImage.size
+        let size = fullImage.size
         let insetFrame = CGRect(
             x: size.width * Inset.margin,
             y: size.width * Inset.margin,
@@ -76,9 +77,9 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1 // one image pixel per camera pixel
         return UIGraphicsImageRenderer(size: size, format: format).image { _ in
-            rearImage.draw(at: .zero)
+            fullImage.draw(at: .zero)
             UIBezierPath(roundedRect: insetFrame, cornerRadius: size.width * Inset.cornerRadius).addClip()
-            frontImage.draw(in: insetFrame)
+            insetImage.draw(in: insetFrame)
         }
     }
 
