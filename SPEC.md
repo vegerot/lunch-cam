@@ -70,6 +70,7 @@ A Mac test harness for the compositor is not built: the phone loop is one comman
 `lunch-cam/dev` is one shell script with three subcommands:
 
 - `./dev install` builds with `xcodebuild`, installs with `devicectl` (Apple's device command-line tool), and launches the app. Adding `--console` keeps showing the app's output; stopping it stops the app. This is also the weekly reinstall.
+- `./dev install --tint` starts the app in **tint mode**: a red layer with an F over the front camera's picture and a green layer with a B over the back camera's. Xcode's Device Hub gives apps black camera frames while it controls the phone (Apple documents this in "Interacting with your app in Device Hub"), so without the tint the two pictures are black on black. The tint is a launch argument: it lasts for that launch only, the app opened from the Home Screen is normal, and saved photos are not tinted. Seen in Device Hub on 2026-11-23, before and after a swap.
 - `./dev photo [file]` copies the last photo off the phone, for as long as the app keeps its debug copy.
 - `./dev test` runs the inset geometry tests on the Mac.
 

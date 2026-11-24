@@ -27,12 +27,12 @@ struct CameraView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             Color.black.ignoresSafeArea()
-            Preview(layer: swapped ? camera.frontPreview : camera.rearPreview)
+            preview(front: swapped)
                 .aspectRatio(3 / 4, contentMode: .fit)
                 .overlay {
                     GeometryReader { photo in
                         let frame = inset.frame(in: photo.size)
-                        Preview(layer: swapped ? camera.rearPreview : camera.frontPreview)
+                        preview(front: !swapped)
                             .frame(width: frame.width, height: frame.height)
                             .clipShape(RoundedRectangle(cornerRadius: photo.size.width * Inset.cornerRadius))
                             .onTapGesture {
@@ -83,6 +83,26 @@ struct CameraView: View {
         .sheet(item: $shot) { shot in
             ShareSheet(image: shot.image).onAppear { print("share sheet shown") }
         }
+    }
+
+    /// One camera's live picture. With the `--tint` launch argument (`./dev install --tint`)
+    /// it gets a colored layer and a letter: red F for the front camera, green B for the back.
+    /// Device Hub gives apps black camera frames, so without this the two pictures look alike.
+    private func preview(front: Bool) -> some View {
+        Preview(layer: front ? camera.frontPreview : camera.rearPreview)
+            .overlay {
+                if ProcessInfo.processInfo.arguments.contains("--tint") {
+                    (front ? Color.red : Color.green).opacity(0.4)
+                        .overlay {
+                            Text(front ? "F" : "B")
+                                .font(.system(size: 200, weight: .bold))
+                                .minimumScaleFactor(0.1)
+                                .foregroundStyle(.white)
+                                .padding(8)
+                        }
+                        .allowsHitTesting(false)
+                }
+            }
     }
 
     private func shoot(via source: String) {
